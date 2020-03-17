@@ -1,0 +1,149 @@
+#!/usr/bin/python3
+
+import argparse
+import json
+import os
+import subprocess
+import shutil
+import sys
+
+# Hack to ensure with have the osbuild package available
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
+                                "osbuild"))
+import osbuild
+
+
+RESET = "\033[0m"
+BOLD = "\033[1m"
+RED = "\033[31m"
+
+
+def remove_path(path):
+    def fixperms(p):
+        subprocess.run(["chattr", "-i", p],
+                       check=False)
+        os.chmod(p, 0o700)
+
+    def unlink(p):
+        try:
+            os.unlink(p)
+        except IsADirectoryError:
+            remove_path(p)
+        except FileNotFoundError:
+            pass
+
+    def on_error(fn, p, exc_info):
+        e = exc_info[0]
+        if issubclass(e, FileNotFoundError):
+            pass
+        elif issubclass(e, PermissionError):
+            if p != path:
+                fixperms(os.path.dirname(p))
+            fixperms(p)
+            unlink(p)
+        else:
+            raise
+
+    shutil.rmtree(path, onerror=on_error)
+
+
+def store_status(store, object_id):
+    if not store:
+        return ""
+
+    if not store.contains(object_id):
+        return ""
+
+    return " stored"
+
+
+def print_pipeline(pipeline, store, level=0):
+    indent = "  "*level
+
+    if pipeline.build:
+        print(f"{indent}build:")
+        print_pipeline(pipeline.build, store, level=level+1)
+
+    runner = pipeline.runner
+    if runner:
+        print(f"{indent}runner:")
+        print(f"{indent}  {runner}")
+
+    if pipeline.stages:
+        print(f"{indent}stages:")
+    for stage in pipeline.stages:
+        status = store_status(store, stage.id)
+        print(f"{indent}  {stage.name}: \t{stage.id}{status}")
+
+    asm = pipeline.assembler
+    if asm:
+        status = store_status(store, asm.id)
+        print(f"{indent}assembler:")
+        print(f"{indent}  {asm.name}: \t{asm.id}{status}")
+
+
+def find_osbuild_module():
+    this_file = os.path.dirname(os.path.abspath(__file__))
+    return os.path.join(this_file, "osbuild")
+
+
+def build(args):
+    builddir = os.path.abspath("build")
+    os.makedirs(builddir, exist_ok=True)
+
+    with open("f30-ostree.json", "r") as fp:
+        manifest = json.load(fp)
+    sources = manifest.get("sources", {})
+    pipeline = manifest["pipeline"]
+    pipeline = osbuild.load(pipeline, sources)
+
+    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
+
+    print("Building the following pipeline:")
+    print_pipeline(pipeline, store)
+
+    print("")
+    for stage in pipeline.stages:
+        if stage.name == "org.osbuild.dnf":
+            print(f"checkpointing dnf stage: {stage.id}")
+            stage.checkpoint = True
+
+    libdir = find_osbuild_module()
+
+    try:
+        r = pipeline.run(store.store,
+                         interactive=True,
+                         libdir=libdir)
+    except KeyboardInterrupt:
+        print()
+        print(f"{RESET}{BOLD}{RED}Aborted{RESET}")
+        return 130
+
+    if not r["success"]:
+        print()
+        print(f"{RESET}{BOLD}{RED}Failed{RESET}")
+        return 1
+
+    tree_id = pipeline.tree_id
+    output_id = pipeline.output_id
+
+    obj = store.resolve_ref(output_id)
+    with open(f"{obj}/compose.json") as fp:
+        commit_meta = json.load(fp)
+        commit_id = commit_meta["ostree-commit"]
+
+    print("")
+    print("Pipeline for ostree commit is done:")
+    print("    tree id:", tree_id)
+    print("  output id:", output_id)
+    print("  commit id:", commit_id)
+
+
+def main():
+    parser = argparse.ArgumentParser(description="osbuild ostree demo")
+    args = parser.parse_args()
+    return build(args)
+
+
+if __name__ == "__main__":
+    sys.exit(main())

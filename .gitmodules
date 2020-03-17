@@ -1,0 +1,4 @@
+[submodule "osbuild"]
+	path = osbuild
+	url = https://github.com/gicmo/osbuild.git
+	branch = ostree
