@@ -1,0 +1,73 @@
+{
+    "pipeline": {
+	"stages": [
+	    {
+		"name": "org.osbuild.ostree",
+		"options": {
+		    "commit": "",
+		    "osname": "fedora",
+		    "mounts": ["boot", "boot/efi"],
+		    "rootfs": "UUID=76a22bf4-f153-4541-b6c7-0332c0dfaeac",
+		    "kernel_opts": ["console=tty0", "console=ttyS0",
+				    "systemd.log_target=console",
+				    "systemd.journald.forward_to_console=1",
+				    "enforcing=0"]
+		}
+	    },
+	    {
+		"name": "org.osbuild.ostree.grub2",
+		"options": {
+		    "commit": "",
+		    "osname": "fedora",
+		    "fsuuid": "7acfe2cc-4134-482a-a9d4-4979a5a87569"
+		}
+	    }
+	],
+	"assembler": {
+	    "name": "org.osbuild.qemu",
+	    "options": {
+		"bootloader": { "type": "none" },
+		"format": "qcow2",
+		"filename": "fedora-30-ostree.qcow2",
+		"ptuuid": "29579f67-d390-43e7-bd96-dc8f5461171e",
+		"pttype": "gpt",
+		"partitions": [
+		    {
+			"size": 786432,
+			"filesystem": {
+			    "type": "ext4",
+			    "uuid": "7acfe2cc-4134-482a-a9d4-4979a5a87569",
+			    "label": "boot",
+			    "mountpoint": "/boot"
+			}
+		    },
+		    {
+			"size": 972800,
+			"type": "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
+			"filesystem": {
+			    "type": "vfat",
+			    "uuid": "46BB-8120",
+			    "label": "EFI System Partition",
+			    "mountpoint": "/boot/efi"
+			}
+		    },
+		    {
+			"size": 8192,
+			"type": "21686148-6449-6E6F-744E-656564454649",
+			"bootable": true
+		    },
+		    {
+			"type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+			"filesystem": {
+			    "type": "xfs",
+			    "uuid": "76a22bf4-f153-4541-b6c7-0332c0dfaeac",
+			    "mountpoint": "/",
+			    "label": "root"
+			}
+		    }
+		],
+		"size": 3221225472
+	    }
+	}
+    }
+}

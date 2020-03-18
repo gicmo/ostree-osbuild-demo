@@ -129,6 +129,68 @@ def build_commit(builddir, args):
     return output_id, commit_id
 
 
+def prepare_sources(builddir, output_id, commit_id):
+    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
+    obj = store.resolve_ref(output_id)
+    url = "file://" + os.path.join(obj, "repo")
+    sources = {
+        "org.osbuild.ostree": {
+            "commits": {
+                commit_id: {
+                    "remote": {
+                        "uid": commit_id,
+                        "url": url
+                    }
+                }
+            }
+        }
+    }
+
+    return sources
+
+
+def prepare_image_pipeline(commit_id):
+    with open("f30-ostree-image.json", "r") as fp:
+        manifest = json.load(fp)
+
+    for stage in manifest["pipeline"]["stages"]:
+        options = stage.get("options")
+        if not options or "commit" not in options:
+            continue
+        options["commit"] = commit_id
+    return manifest
+
+
+def build_image(builddir, manifest, args):
+    sources = manifest.get("sources", {})
+    pipeline = manifest["pipeline"]
+    pipeline = osbuild.load(pipeline, sources)
+
+    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
+
+    print("Building the following pipeline:")
+    print_pipeline(pipeline, store)
+
+    print("")
+    for stage in pipeline.stages:
+        if stage.name == "org.osbuild.dnf":
+            print(f"checkpointing dnf stage: {stage.id}")
+            stage.checkpoint = True
+
+    libdir = find_osbuild_module()
+
+    r = pipeline.run(store.store,
+                     interactive=True,
+                     libdir=libdir)
+
+    if not r["success"]:
+        raise BuildError
+
+    output_id = pipeline.output_id
+    image_name = pipeline.assembler.options["filename"]
+    return output_id, image_name
+
+
 def build(args):
     builddir = os.path.abspath("build")
     os.makedirs(builddir, exist_ok=True)
@@ -140,6 +202,20 @@ def build(args):
         print("Pipeline for ostree commit is done:")
         print("  output id:", output_id)
         print("  commit id:", commit_id)
+
+        manifest = prepare_image_pipeline(commit_id)
+        sources = prepare_sources(builddir, output_id, commit_id)
+        manifest["sources"] = sources
+
+        output_id, image_name = build_image(builddir, manifest, args)
+        print("")
+        print("Pipeline for ostree image is done:")
+        print("  output id:", output_id)
+        print("      image:", image_name)
+
+        print("")
+        print("Image ready at:")
+        print(f"  {builddir}/store/refs/{output_id}/{image_name}")
 
     except KeyboardInterrupt:
         print()
