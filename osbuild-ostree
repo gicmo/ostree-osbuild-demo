@@ -91,7 +91,7 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def build(builddir, args):
+def build_commit(builddir, args):
 
     with open("f30-ostree.json", "r") as fp:
         manifest = json.load(fp)
@@ -137,7 +137,7 @@ def main():
     os.makedirs(builddir, exist_ok=True)
 
     try:
-        output_id, commit_id = build(builddir, args)
+        output_id, commit_id = build_commit(builddir, args)
     except KeyboardInterrupt:
         print()
         print(f"{RESET}{BOLD}{RED}Aborted{RESET}")
