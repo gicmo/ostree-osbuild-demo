@@ -18,6 +18,10 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
+class BuildError(Exception):
+    pass
+
+
 def remove_path(path):
     def fixperms(p):
         subprocess.run(["chattr", "-i", p],
@@ -110,21 +114,13 @@ def build(args):
 
     libdir = find_osbuild_module()
 
-    try:
-        r = pipeline.run(store.store,
-                         interactive=True,
-                         libdir=libdir)
-    except KeyboardInterrupt:
-        print()
-        print(f"{RESET}{BOLD}{RED}Aborted{RESET}")
-        return 130
+    r = pipeline.run(store.store,
+                     interactive=True,
+                     libdir=libdir)
 
     if not r["success"]:
-        print()
-        print(f"{RESET}{BOLD}{RED}Failed{RESET}")
-        return 1
+        raise BuildError
 
-    tree_id = pipeline.tree_id
     output_id = pipeline.output_id
 
     obj = store.resolve_ref(output_id)
@@ -132,17 +128,30 @@ def build(args):
         commit_meta = json.load(fp)
         commit_id = commit_meta["ostree-commit"]
 
-    print("")
-    print("Pipeline for ostree commit is done:")
-    print("    tree id:", tree_id)
-    print("  output id:", output_id)
-    print("  commit id:", commit_id)
+    return output_id, commit_id
 
 
 def main():
     parser = argparse.ArgumentParser(description="osbuild ostree demo")
     args = parser.parse_args()
-    return build(args)
+
+    try:
+        output_id, commit_id = build(args)
+    except KeyboardInterrupt:
+        print()
+        print(f"{RESET}{BOLD}{RED}Aborted{RESET}")
+        return 130
+    except BuildError:
+        print()
+        print(f"{RESET}{BOLD}{RED}Failed{RESET}")
+        return 1
+
+    print("")
+    print("Pipeline for ostree commit is done:")
+    print("  output id:", output_id)
+    print("  commit id:", commit_id)
+
+    return 0
 
 
 if __name__ == "__main__":
