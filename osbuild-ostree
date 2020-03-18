@@ -129,15 +129,18 @@ def build_commit(builddir, args):
     return output_id, commit_id
 
 
-def main():
-    parser = argparse.ArgumentParser(description="osbuild ostree demo")
-    args = parser.parse_args()
-
+def build(args):
     builddir = os.path.abspath("build")
     os.makedirs(builddir, exist_ok=True)
 
     try:
         output_id, commit_id = build_commit(builddir, args)
+
+        print("")
+        print("Pipeline for ostree commit is done:")
+        print("  output id:", output_id)
+        print("  commit id:", commit_id)
+
     except KeyboardInterrupt:
         print()
         print(f"{RESET}{BOLD}{RED}Aborted{RESET}")
@@ -147,12 +150,11 @@ def main():
         print(f"{RESET}{BOLD}{RED}Failed{RESET}")
         return 1
 
-    print("")
-    print("Pipeline for ostree commit is done:")
-    print("  output id:", output_id)
-    print("  commit id:", commit_id)
 
-    return 0
+def main():
+    parser = argparse.ArgumentParser(description="osbuild ostree demo")
+    args = parser.parse_args()
+    return build(args)
 
 
 if __name__ == "__main__":
