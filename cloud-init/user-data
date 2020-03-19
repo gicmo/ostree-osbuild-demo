@@ -1,0 +1,10 @@
+#cloud-config
+users:
+  - default
+  - name: root
+    gecos: Charly Root
+    ssh_pwauth: True
+chpasswd:
+  list: |
+    root:r
+  expire: False

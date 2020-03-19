@@ -18,6 +18,50 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
+def genisoimage(outdir, datdir):
+    args = [
+        "genisoimage",
+        "-input-charset", "utf-8",
+        "-output", f"{outdir}/cloudinit.iso",
+        "-volid", "cidata",
+        "-joliet",
+        "-rock",
+        "-quiet",
+        f"{datdir}/user-data",
+        f"{datdir}/meta-data"]
+
+    subprocess.run(args)
+
+
+def boot(args):
+    builddir = "build"
+    with open(f"{builddir}/info.json", "r") as f:
+        info = json.load(f)
+
+    output_id = info["image"]["output_id"]
+    image_name = info["image"]["name"]
+    path = f"{builddir}/store/refs/{output_id}/{image_name}"
+    print(f"Image at {path}")
+
+    datadir = os.path.abspath("cloud-init")
+    genisoimage(builddir, datadir)
+
+    ovmfcode = "/usr/share/OVMF/OVMF_CODE.fd"
+
+    args = ['qemu-system-x86_64',
+            "-m", "2048",
+            "-drive",
+            f"file={ovmfcode},if=pflash,format=raw,unit=0,readonly=on",
+            '-enable-kvm',
+            "-snapshot",
+            f"-cdrom", f"{builddir}/cloudinit.iso",
+            "-net", "nic,model=virtio",
+            "-net", "user,hostfwd=tcp::2222-:22,hostfwd=tcp::9091-:9090",
+            path]
+    r = subprocess.run(args)
+    return r.returncode
+
+
 class BuildError(Exception):
     pass
 
@@ -270,6 +314,9 @@ def main():
     subpar = sp.add_parser("clean", help='cleanup the build dir')
     subpar.set_defaults(cmd='clean')
 
+    subpar = sp.add_parser("boot", help='boot the final image')
+    subpar.set_defaults(cmd='boot')
+
     args = parser.parse_args()
 
     if not args.cmd:
@@ -281,6 +328,8 @@ def main():
         return build(args)
     if args.cmd == "clean":
         return clean(args)
+    if args.cmd == "boot":
+        return boot(args)
 
 
 if __name__ == "__main__":
