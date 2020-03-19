@@ -191,6 +191,11 @@ def build_image(builddir, manifest, args):
     return output_id, image_name
 
 
+def write_info(builddir, info):
+    with open(f"{builddir}/info.json", "w+") as f:
+        json.dump(info, f)
+
+
 def build(args):
     builddir = os.path.abspath("build")
     os.makedirs(builddir, exist_ok=True)
@@ -202,6 +207,14 @@ def build(args):
         print("Pipeline for ostree commit is done:")
         print("  output id:", output_id)
         print("  commit id:", commit_id)
+
+        info = {
+            "ostree": {
+                "output_id": output_id,
+                "commit_id": commit_id
+            }
+        }
+        write_info(builddir, info)
 
         manifest = prepare_image_pipeline(commit_id)
         sources = prepare_sources(builddir, output_id, commit_id)
@@ -216,6 +229,12 @@ def build(args):
         print("")
         print("Image ready at:")
         print(f"  {builddir}/store/refs/{output_id}/{image_name}")
+
+        info["image"] = {
+            "output_id": output_id,
+            "name": image_name,
+        }
+        write_info(builddir, info)
 
     except KeyboardInterrupt:
         print()
