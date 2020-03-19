@@ -229,8 +229,21 @@ def build(args):
 
 def main():
     parser = argparse.ArgumentParser(description="osbuild ostree demo")
+    parser.set_defaults(cmd=None)
+    sp = parser.add_subparsers(help='commands')
+
+    subpar = sp.add_parser("build", help='build the image')
+    subpar.set_defaults(cmd='build')
+
     args = parser.parse_args()
-    return build(args)
+
+    if not args.cmd:
+        print(f"{RED}Error{RESET}: Need command\n")
+        parser.print_help(sys.stderr)
+        return 1
+
+    if args.cmd == "build":
+        return build(args)
 
 
 if __name__ == "__main__":
