@@ -246,6 +246,19 @@ def build(args):
         return 1
 
 
+def clean(args):
+    path = os.path.abspath("build")
+    print(f"About to clean up {path}.")
+    try:
+        s = input("Type 'Y' to confirm: ")
+    except (EOFError, KeyboardInterrupt):
+        return 1
+    if s != 'Y':
+        return 1
+    remove_path(path)
+    return 0
+
+
 def main():
     parser = argparse.ArgumentParser(description="osbuild ostree demo")
     parser.set_defaults(cmd=None)
@@ -253,6 +266,9 @@ def main():
 
     subpar = sp.add_parser("build", help='build the image')
     subpar.set_defaults(cmd='build')
+
+    subpar = sp.add_parser("clean", help='cleanup the build dir')
+    subpar.set_defaults(cmd='clean')
 
     args = parser.parse_args()
 
@@ -263,6 +279,8 @@ def main():
 
     if args.cmd == "build":
         return build(args)
+    if args.cmd == "clean":
+        return clean(args)
 
 
 if __name__ == "__main__":
