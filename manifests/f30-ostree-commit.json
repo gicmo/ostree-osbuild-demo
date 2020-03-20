@@ -10,98 +10,100 @@
     }
   },
   "pipeline": {
-    "stages": [   {
-      "name": "org.osbuild.dnf",
-      "options": {
-        "releasever": "30",
-        "basearch": "x86_64",
-        "install_weak_deps": true,
-        "repos": [
-          "sha256:9f596e18f585bee30ac41c11fb11a83ed6b11d5b341c1cb56ca4015d7717cb97"
-        ],
-        "packages": [
-          "@Fedora Cloud Server",
-          "chrony",
-          "efibootmgr",
-          "grub2-efi-ia32",
-          "grub2-efi-x64",
-          "grub2-pc",
-          "grub2-tools",
-          "kernel",
-          "langpacks-en",
-          "nss-altfiles",
-          "ostree",
-          "qemu-guest-agent",
-          "rpm-ostree",
-          "selinux-policy-targeted",
-          "shim-ia32",
-          "shim-x64",
-          "spice-vdagent",
-          "xen-libs",
-          "fedora-repos-ostree"
-        ],
-        "exclude_packages": [
-          "dracut-config-rescue",
-          "PackageKit"
-        ],
-        "module_platform_id": "platform:f30"
+    "stages": [
+      {
+        "name": "org.osbuild.dnf",
+        "options": {
+          "releasever": "30",
+          "basearch": "x86_64",
+          "install_weak_deps": true,
+          "repos": [
+            "sha256:9f596e18f585bee30ac41c11fb11a83ed6b11d5b341c1cb56ca4015d7717cb97"
+          ],
+          "packages": [
+            "@Fedora Cloud Server",
+            "chrony",
+            "efibootmgr",
+            "grub2-efi-ia32",
+            "grub2-efi-x64",
+            "grub2-pc",
+            "grub2-tools",
+            "kernel",
+            "langpacks-en",
+            "nss-altfiles",
+            "ostree",
+            "qemu-guest-agent",
+            "rpm-ostree",
+            "selinux-policy-targeted",
+            "shim-ia32",
+            "shim-x64",
+            "spice-vdagent",
+            "xen-libs",
+            "fedora-repos-ostree"
+          ],
+          "exclude_packages": [
+            "dracut-config-rescue",
+            "PackageKit"
+          ],
+          "module_platform_id": "platform:f30"
+        }
+      },
+      {
+        "name": "org.osbuild.systemd",
+        "options": {
+          "enabled_services": [
+            "cloud-config",
+            "cloud-final",
+            "cloud-init",
+            "cloud-init-local"
+          ]
+        }
+      },
+      {
+        "name": "org.osbuild.locale",
+        "options": {
+          "language": "en_US"
+        }
+      },
+      {
+        "name": "org.osbuild.fstab",
+        "options": {
+          "filesystems": [
+            {
+              "uuid": "7acfe2cc-4134-482a-a9d4-4979a5a87569",
+              "vfs_type": "ext4",
+              "path": "/boot",
+              "freq": 1,
+              "passno": 1
+            },
+            {
+              "uuid": "76a22bf4-f153-4541-b6c7-0332c0dfaeac",
+              "vfs_type": "ext4",
+              "path": "/",
+              "freq": 1,
+              "passno": 1
+            },
+            {
+              "uuid": "46BB-8120",
+              "vfs_type": "vfat",
+              "path": "/boot/efi",
+              "options": "umask=0077,shortname=winnt",
+              "freq": 0,
+              "passno": 2
+            }
+          ]
+        }
+      },
+      {
+        "name": "org.osbuild.selinux",
+        "options": {
+          "file_contexts": "etc/selinux/targeted/contexts/files/file_contexts"
+        }
+      },
+      {
+        "name": "org.osbuild.rpm-ostree"
       }
-    },
-    {
-      "name": "org.osbuild.systemd",
-      "options": {
-        "enabled_services": [
-          "cloud-config",
-          "cloud-final",
-          "cloud-init",
-          "cloud-init-local"
-        ]
-      }
-    },
-    {
-      "name": "org.osbuild.locale",
-      "options": {
-        "language": "en_US"
-      }
-    },
-    {
-      "name": "org.osbuild.fstab",
-      "options": {
-        "filesystems": [
-          {
-            "uuid": "7acfe2cc-4134-482a-a9d4-4979a5a87569",
-            "vfs_type": "ext4",
-            "path": "/boot",
-            "freq": 1,
-            "passno": 1
-          },
-          {
-            "uuid": "76a22bf4-f153-4541-b6c7-0332c0dfaeac",
-            "vfs_type": "ext4",
-            "path": "/",
-            "freq": 1,
-            "passno": 1
-          },
-          {
-            "uuid": "46BB-8120",
-            "vfs_type": "vfat",
-            "path": "/boot/efi",
-            "options": "umask=0077,shortname=winnt",
-            "freq": 0,
-            "passno": 2
-          }
-        ]
-      }
-    },
-    {
-      "name": "org.osbuild.selinux",
-      "options": {
-        "file_contexts": "etc/selinux/targeted/contexts/files/file_contexts"
-      }
-    },
-    {
-      "name": "org.osbuild.rpm-ostree"
-    }],
+    ],
     "assembler": {
       "name": "org.osbuild.ostree.commit"
     }
