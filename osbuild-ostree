@@ -174,17 +174,20 @@ def build_commit(builddir, args):
 
 
 def prepare_sources(builddir, output_id, commit_id):
+    with open("manifests/f30-ostree-image.json", "r") as fp:
+        manifest = json.load(fp)
+
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
     obj = store.resolve_ref(output_id)
     url = "file://" + os.path.join(obj, "repo")
-    sources = {
-        "org.osbuild.ostree": {
-            "commits": {
-                commit_id: {
-                    "remote": {
-                        "uid": commit_id,
-                        "url": url
-                    }
+    sources = manifest["sources"]
+
+    sources["org.osbuild.ostree"] = {
+        "commits": {
+            commit_id: {
+                "remote": {
+                    "uid": commit_id,
+                    "url": url
                 }
             }
         }
