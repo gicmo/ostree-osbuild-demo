@@ -149,7 +149,10 @@ def build_commit(builddir, args):
     print_pipeline(pipeline, store)
 
     print("")
-    for stage in pipeline.stages:
+    stages = pipeline.stages
+    if pipeline.build:
+        stages = pipeline.build.stages + stages
+    for stage in stages:
         if stage.name == "org.osbuild.dnf":
             print(f"checkpointing dnf stage: {stage.id}")
             stage.checkpoint = True
@@ -219,7 +222,10 @@ def build_image(builddir, manifest, args):
     print_pipeline(pipeline, store)
 
     print("")
-    for stage in pipeline.stages:
+    stages = pipeline.stages
+    if pipeline.build:
+        stages = pipeline.build.stages + stages
+    for stage in stages:
         if stage.name == "org.osbuild.dnf":
             print(f"checkpointing dnf stage: {stage.id}")
             stage.checkpoint = True
