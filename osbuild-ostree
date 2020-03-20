@@ -137,7 +137,7 @@ def find_osbuild_module():
 
 def build_commit(builddir, args):
 
-    with open("f30-ostree.json", "r") as fp:
+    with open("manifests/f30-ostree-commit.json", "r") as fp:
         manifest = json.load(fp)
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
@@ -194,7 +194,7 @@ def prepare_sources(builddir, output_id, commit_id):
 
 
 def prepare_image_pipeline(commit_id):
-    with open("f30-ostree-image.json", "r") as fp:
+    with open("manifests/f30-ostree-image.json", "r") as fp:
         manifest = json.load(fp)
 
     for stage in manifest["pipeline"]["stages"]:
