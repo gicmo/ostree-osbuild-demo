@@ -37,7 +37,7 @@
           "type": "none"
         },
         "format": "qcow2",
-        "filename": "fedora-30-ostree.qcow2",
+        "filename": "fedora-31-ostree.qcow2",
         "ptuuid": "29579f67-d390-43e7-bd96-dc8f5461171e",
         "pttype": "gpt",
         "partitions": [
