@@ -10,6 +10,36 @@
     }
   },
   "pipeline": {
+    "build": {
+      "pipeline": {
+        "stages": [
+          {
+            "name": "org.osbuild.dnf",
+            "options": {
+              "releasever": "31",
+              "basearch": "x86_64",
+              "install_weak_deps": true,
+              "repos": [
+                "sha256:e39c033883bf8520576de0b0875b5c8cfc40d04f1a0aaf01f1edf57267807580"
+              ],
+              "packages": [
+                "dnf",
+                "dosfstools",
+                "e2fsprogs",
+                "policycoreutils",
+                "qemu-img",
+                "rpm-ostree",
+                "systemd",
+                "tree",
+                "xfsprogs"
+              ],
+              "module_platform_id": "platform:f31"
+            }
+          }
+        ]
+      },
+      "runner": "org.osbuild.fedora31"
+    },
     "stages": [
       {
         "name": "org.osbuild.dnf",
