@@ -153,8 +153,8 @@ def build_commit(builddir, args):
     if pipeline.build:
         stages = pipeline.build.stages + stages
     for stage in stages:
-        if stage.name == "org.osbuild.dnf":
-            print(f"checkpointing dnf stage: {stage.id}")
+        if stage.name == "org.osbuild.rpm":
+            print(f"checkpointing rpm stage: {stage.id}")
             stage.checkpoint = True
 
     libdir = find_osbuild_module()
@@ -226,8 +226,8 @@ def build_image(builddir, manifest, args):
     if pipeline.build:
         stages = pipeline.build.stages + stages
     for stage in stages:
-        if stage.name == "org.osbuild.dnf":
-            print(f"checkpointing dnf stage: {stage.id}")
+        if stage.name == "org.osbuild.rpm":
+            print(f"checkpointing rpm stage: {stage.id}")
             stage.checkpoint = True
 
     libdir = find_osbuild_module()
