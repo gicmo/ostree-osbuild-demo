@@ -5,8 +5,6 @@ to create [ostree][ostree] commits and then in turn images based on
 that commit.
 NB: It uses not yet released osbuild code (see [PR#282][pr282])
 
-It has been tested on Fedora 31.
-
 # installation
 Clone the [repository][this] and its git sub-module with:
 
@@ -15,11 +13,7 @@ git clone --recurisve
 ```
 
 The dependencies to run it are:
-  - rpm-ostree
-  - qemu-img
-  - dnf
-  - e2fsprogs
-  - policycoreutils
+  - rpm
   - systemd-container
 
 
@@ -45,39 +39,55 @@ this should give you something along the lines of:
 
 ```
 Building the following pipeline:
+build:
+  runner:
+    org.osbuild.fedora31
+  stages:
+    org.osbuild.rpm: 	2dcbcce84e0202ef20f819a52ce252a66b4433ef449f879557648619b827dd1c
 runner:
   org.osbuild.fedora31
 stages:
-  org.osbuild.dnf: 	0b2ea0bde7d67753d87ceaba6a94d63ee9166b80e0577c1a999c4cc4e0eb11b8 stored
-  org.osbuild.systemd: 	85df13e616846623154da03ea2b0ac68f68b4622bd73c8b953d19bc555a6d1eb
-  org.osbuild.locale: 	8a0baff611a3fede840e91c91ffc616770868f9c94a8c83c9f403705003f4aa9
-  org.osbuild.fstab: 	7f6688c4d46d07ee7b5f9bbc5a53d45cf48cb5cd3464f56fac6060e4c22e9a3c
-  org.osbuild.selinux: 	0e64cd3657b821ee478d2d3c384a7c1bb7256bacfbea9b86b60317c7564a2e21
-  org.osbuild.rpm-ostree: 	c337883341881c01534fabf007060eebbe842ace326b4fd77bc57df3c16eab31
+  org.osbuild.rpm: 	7005fc8469b54a23ce5223d187385bf402dde9d624db1cbda14a717c0b7965d3
+  org.osbuild.systemd: 	4a102eb547e484f6c2847d06249bd9dc6a83fee3b59a87bed4b472440d8a2431
+  org.osbuild.locale: 	bc330c673086db591200698789fd4e4cfbd1e78ac951b7fd9f70a142365dd6ad
+  org.osbuild.fstab: 	40db0e1b6ecd1c295f815dcfce7404d2235f1631d10d05431d91cebeae2737de
+  org.osbuild.selinux: 	7ce472966ce2660c6247c965d14f8f2fc5dd7ff17f8184af20c2d44f225d9148
+  org.osbuild.rpm-ostree: 	fb4ec097c2b29858fc7b14ca2d4e628f3ef2c21a702d06dd1062f464790310b9
 assembler:
-  org.osbuild.ostree.commit: 	8fbb2b189608bfdbf3fd0bd3129bf453fc5633331d1fd3797455f7be9ab705b3 stored
+  org.osbuild.ostree.commit: 	9c20d23e0c2d43f305c00d4a902c7ac6e259f2222d3bf6c3162c0d333d1a27e0
 
-checkpointing dnf stage: 0b2ea0bde7d67753d87ceaba6a94d63ee9166b80e0577c1a999c4cc4e0eb11b8
+checkpointing rpm stage: 2dcbcce84e0202ef20f819a52ce252a66b4433ef449f879557648619b827dd1c
+checkpointing rpm stage: 7005fc8469b54a23ce5223d187385bf402dde9d624db1cbda14a717c0b7965d3
+
+...
 
 Pipeline for ostree commit is done:
-  output id: 8fbb2b189608bfdbf3fd0bd3129bf453fc5633331d1fd3797455f7be9ab705b3
-  commit id: 63081d95d528574a910144fcd0c008a413d793df2c49d1dacbb8489838586a4f
+  output id: 9c20d23e0c2d43f305c00d4a902c7ac6e259f2222d3bf6c3162c0d333d1a27e0
+  commit id: 9eb8e0db758a308a8a91e4f8c26aad2d1efaaea691a6784dc6e1a46b7d3bfe7b
 Building the following pipeline:
+build:
+  runner:
+    org.osbuild.fedora31
+  stages:
+    org.osbuild.rpm: 	2dcbcce84e0202ef20f819a52ce252a66b4433ef449f879557648619b827dd1c stored
 runner:
   org.osbuild.fedora31
 stages:
-  org.osbuild.ostree: 	3353a97d42ac1c873122ab67bb02f7d784f18beb7291c10d0a2ef0550c6869f6
-  org.osbuild.ostree.grub2: 	0bd900be08d89c790895a68a7ccc05aae895845680772f190e1790fba9a05a5a
+  org.osbuild.ostree: 	1a9ad4de7e9a3d96138156973cd0b29d0babf27e4b8cfe5725f595dbbe9bf10a
+  org.osbuild.ostree.grub2: 	883b4da9cab2fd74b0d027d9a2a48a3a8043712c9508e7ad4719b297002d093f
 assembler:
-  org.osbuild.qemu: 	678232f96d21fb49ad46a7f336ea29d0694b9b823757ea1464489755c28aeea1 stored
+  org.osbuild.qemu: 	9a20ec3637c3feed05eeab19f93b86f35ef9343b5d3ae8d846497065377a1e24
 
+checkpointing rpm stage: 2dcbcce84e0202ef20f819a52ce252a66b4433ef449f879557648619b827dd1c
+
+...
 
 Pipeline for ostree image is done:
-  output id: 678232f96d21fb49ad46a7f336ea29d0694b9b823757ea1464489755c28aeea1
-      image: fedora-30-ostree.qcow2
+  output id: 9a20ec3637c3feed05eeab19f93b86f35ef9343b5d3ae8d846497065377a1e24
+      image: fedora-31-ostree.qcow2
 
 Image ready at:
-  /home/gicmo/Code/src/osbuild-iot/build/store/refs/678232f96d21fb49ad46a7f336ea29d0694b9b823757ea1464489755c28aeea1/fedora-30-ostree.qcow2
+  /home/gicmo/Code/src/osbuild-iot/build/store/refs/9a20ec3637c3feed05eeab19f93b86f35ef9343b5d3ae8d846497065377a1e24/fedora-31-ostree.qcow2
 ```
 
 
