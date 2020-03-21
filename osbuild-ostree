@@ -137,7 +137,7 @@ def find_osbuild_module():
 
 def build_commit(builddir, args):
 
-    with open("f30-ostree.json", "r") as fp:
+    with open("manifests/f31-ostree-commit.json", "r") as fp:
         manifest = json.load(fp)
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
@@ -149,9 +149,12 @@ def build_commit(builddir, args):
     print_pipeline(pipeline, store)
 
     print("")
-    for stage in pipeline.stages:
-        if stage.name == "org.osbuild.dnf":
-            print(f"checkpointing dnf stage: {stage.id}")
+    stages = pipeline.stages
+    if pipeline.build:
+        stages = pipeline.build.stages + stages
+    for stage in stages:
+        if stage.name == "org.osbuild.rpm":
+            print(f"checkpointing rpm stage: {stage.id}")
             stage.checkpoint = True
 
     libdir = find_osbuild_module()
@@ -174,17 +177,20 @@ def build_commit(builddir, args):
 
 
 def prepare_sources(builddir, output_id, commit_id):
+    with open("manifests/f31-ostree-image.json", "r") as fp:
+        manifest = json.load(fp)
+
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
     obj = store.resolve_ref(output_id)
     url = "file://" + os.path.join(obj, "repo")
-    sources = {
-        "org.osbuild.ostree": {
-            "commits": {
-                commit_id: {
-                    "remote": {
-                        "uid": commit_id,
-                        "url": url
-                    }
+    sources = manifest["sources"]
+
+    sources["org.osbuild.ostree"] = {
+        "commits": {
+            commit_id: {
+                "remote": {
+                    "uid": commit_id,
+                    "url": url
                 }
             }
         }
@@ -194,7 +200,7 @@ def prepare_sources(builddir, output_id, commit_id):
 
 
 def prepare_image_pipeline(commit_id):
-    with open("f30-ostree-image.json", "r") as fp:
+    with open("manifests/f31-ostree-image.json", "r") as fp:
         manifest = json.load(fp)
 
     for stage in manifest["pipeline"]["stages"]:
@@ -216,9 +222,12 @@ def build_image(builddir, manifest, args):
     print_pipeline(pipeline, store)
 
     print("")
-    for stage in pipeline.stages:
-        if stage.name == "org.osbuild.dnf":
-            print(f"checkpointing dnf stage: {stage.id}")
+    stages = pipeline.stages
+    if pipeline.build:
+        stages = pipeline.build.stages + stages
+    for stage in stages:
+        if stage.name == "org.osbuild.rpm":
+            print(f"checkpointing rpm stage: {stage.id}")
             stage.checkpoint = True
 
     libdir = find_osbuild_module()
