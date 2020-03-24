@@ -1,0 +1,197 @@
+#!/usr/bin/python3
+
+import configparser
+import argparse
+import json
+import os
+import re
+import sys
+import subprocess
+
+
+KEYGEN = """
+%echo Generating a new keypair
+Key-Type: default
+Subkey-Type: default
+Name-Real: Alison Betty Charlston
+Name-Comment: Very real person
+Name-Email: a@b.c
+Expire-Date: 0
+%no-ask-passphrase
+%no-protection
+%commit
+%echo done
+"""
+
+
+class GPGCommand:
+    def __init__(self, home, binary='gpg'):
+        self.home = home
+        self.binary = binary
+
+    def run(self, *args, input=None, check=True):
+        env = os.environ.copy()
+        env["GNUPGHOME"] = self.home
+        argv = [self.binary] + list(args)
+        r = subprocess.run(argv,
+                           input=input,
+                           env=env,
+                           encoding="utf-8",
+                           capture_output=True,
+                           check=check)
+        return r
+
+    def list_key_ids(self):
+        r = self.run("--list-keys", "--with-colons")
+
+        ids = []
+        for l in r.stdout.split("\n"):
+            comps = l.split(":")
+            if comps[0] != "pub":
+                continue
+            ids.append(comps[4])
+        return ids
+
+    def get_key(self, key_id):
+        r = self.run("--export", "--armor", key_id)
+        return r.stdout
+
+    def gen_key(self, batch):
+        r = self.run("--batch",
+                     "--gen-key",
+                     "--with-colons",
+                     input=batch)
+        return r
+
+
+def generate_keypair(args):
+    this_path = os.path.dirname(__file__)
+    home = os.path.join(this_path, "gpghome")
+
+    os.makedirs(home, exist_ok=True)
+    os.chmod(home, 0o700)
+
+    gpg = GPGCommand(home)
+    gpg.gen_key(KEYGEN)
+
+    keyids = gpg.list_key_ids()
+    keyid = next(reversed(keyids))
+
+    config = configparser.ConfigParser()
+    config['signing'] = {
+        'gpghome': home,
+        'keyid': keyid}
+
+    with open('signing.ini', 'w') as f:
+        config.write(f)
+
+    print(f"Wrote config with new key {keyid}:")
+    print("")
+    show_config(config)
+    return 0
+
+
+def load_config(_args):
+    exec_path = os.path.dirname(__file__)
+    path = os.path.join(exec_path, "signing.ini")
+
+    if not os.path.exists(path):
+        return None
+
+    config = configparser.ConfigParser()
+    with open(path, 'r') as f:
+        config.read_file(f)
+    return config
+
+
+def show_config(config):
+    if not config:
+        print("no config")
+        return 1
+
+    print("signing config:")
+    keyid = config['signing']['keyid']
+    gpg_home = config['signing']['gpghome']
+    print(f"  home: {gpg_home}")
+    print(f"  key:  {keyid}")
+    print("")
+
+    gpg = GPGCommand(gpg_home)
+    key = gpg.get_key(keyid)
+    print(key)
+    return 0
+
+
+def has_signatures(repo, commit_id, gpg_home):
+    ostree = ["ostree",
+              "show",
+              "--repo", repo,
+              "--gpg-homedir", gpg_home,
+              commit_id]
+
+    r = subprocess.run(ostree,
+                       encoding="utf-8",
+                       check=True,
+                       capture_output=True)
+
+    m = re.search(r'Found (.*) signatures:', r.stdout)
+    if not m:
+        return 0
+    return int(m.group(1))
+
+
+def main():
+    parser = argparse.ArgumentParser(description="sign a commit")
+    parser.add_argument("--gen-keypair", action="store_true", dest="gen",
+                        help="generate a new gpg keypar")
+    parser.add_argument("--show-config", action="store_true", dest="show",
+                        help="show the current configuration")
+    args = parser.parse_args()
+
+    if args.gen:
+        return generate_keypair(args)
+
+    # Need a config from here on
+    config = load_config(args)
+
+    if args.show:
+        return show_config(config)
+
+    if not config:
+        json.dump({}, sys.stdout)
+        return 0
+
+    gpg_home = config['signing']['gpghome']
+    key_id = config['signing']['keyid']
+
+    info = json.load(sys.stdin)
+    repo = info["repo"]
+    commit_id = info["commit_id"]
+
+    sigs = has_signatures(repo, commit_id, gpg_home)
+    if not sigs:
+        print(f"Calling ostree to sign {commit_id} with {key_id}",
+              file=sys.stderr)
+        print("")
+        ostree = ["ostree",
+                  "gpg-sign",
+                  "--repo", repo,
+                  "--gpg-homedir", gpg_home,
+                  "-v",
+                  commit_id,
+                  key_id]
+
+        subprocess.run(ostree,
+                       encoding="utf-8",
+                       check=True)
+    else:
+        print(f"Found {sigs} existing signatures. Not signing.",
+              file=sys.stderr)
+
+    key = GPGCommand(gpg_home).get_key(key_id)
+    json.dump({"gpgkey": key}, sys.stdout)
+    return 0
+
+
+if __name__ == "__main__":
+    sys.exit(main())
