@@ -1,0 +1,13 @@
+distro: bionic
+language: python
+python:
+  - "3.8"
+env:
+  - PYTHONUNBUFFERED=1
+
+jobs:
+  include:
+    - name: build
+      before_install: sudo apt-get install -y systemd-container rpm ostree gpg
+      script:
+        - sudo env "PATH=$PATH" python3 osbuild-ostree build
