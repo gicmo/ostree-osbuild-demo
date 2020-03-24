@@ -176,7 +176,36 @@ def build_commit(builddir, args):
     return output_id, commit_id
 
 
-def prepare_sources(builddir, output_id, commit_id):
+def sign_commit(builddir, info):
+    output_id = info["ostree"]["output_id"]
+    commit_id = info["ostree"]["commit_id"]
+    repo = f"{builddir}/store/refs/{output_id}/repo"
+    data = {
+        "builddir": builddir,
+        "repo": repo,
+        "output_id": output_id,
+        "commit_id": commit_id,
+    }
+
+    print("")
+    print("Signing commit:")
+
+    this_path = os.path.dirname(os.path.abspath(__file__))
+    r = subprocess.run([f"{this_path}/sign-commit"],
+                       encoding="utf-8",
+                       input=json.dumps(data),
+                       stdout=subprocess.PIPE,
+                       check=False)
+
+    if r.returncode != 0:
+        raise RuntimeError("Failed to sign commit")
+
+    print("")
+    res = json.loads(r.stdout)
+    return res
+
+
+def prepare_sources(builddir, output_id, commit_id, gpg):
     with open("manifests/f31-ostree-image.json", "r") as fp:
         manifest = json.load(fp)
 
@@ -190,7 +219,8 @@ def prepare_sources(builddir, output_id, commit_id):
             commit_id: {
                 "remote": {
                     "uid": commit_id,
-                    "url": url
+                    "url": url,
+                    **gpg
                 }
             }
         }
@@ -269,8 +299,10 @@ def build(args):
         }
         write_info(builddir, info)
 
+        gpg = sign_commit(builddir, info)
+
         manifest = prepare_image_pipeline(commit_id)
-        sources = prepare_sources(builddir, output_id, commit_id)
+        sources = prepare_sources(builddir, output_id, commit_id, gpg)
         manifest["sources"] = sources
 
         output_id, image_name = build_image(builddir, manifest, args)
