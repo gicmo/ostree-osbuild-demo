@@ -135,15 +135,13 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def build_commit(builddir, args):
+def build_commit(store, args):
 
     with open("manifests/f31-ostree-commit.json", "r") as fp:
         manifest = json.load(fp)
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
-
-    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
     print("Building the following pipeline:")
     print_pipeline(pipeline, store)
@@ -205,11 +203,10 @@ def sign_commit(builddir, info):
     return res
 
 
-def prepare_sources(builddir, output_id, commit_id, gpg):
+def prepare_sources(store, output_id, commit_id, gpg):
     with open("manifests/f31-ostree-image.json", "r") as fp:
         manifest = json.load(fp)
 
-    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
     obj = store.resolve_ref(output_id)
     url = "file://" + os.path.join(obj, "repo")
     sources = manifest["sources"]
@@ -241,12 +238,10 @@ def prepare_image_pipeline(commit_id):
     return manifest
 
 
-def build_image(builddir, manifest, args):
+def build_image(store, manifest, args):
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
-
-    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
     print("Building the following pipeline:")
     print_pipeline(pipeline, store)
@@ -286,7 +281,7 @@ def build(args):
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
     try:
-        output_id, commit_id = build_commit(builddir, args)
+        output_id, commit_id = build_commit(store, args)
 
         print("")
         print("Pipeline for ostree commit is done:")
@@ -304,10 +299,10 @@ def build(args):
         gpg = sign_commit(builddir, info)
 
         manifest = prepare_image_pipeline(commit_id)
-        sources = prepare_sources(builddir, output_id, commit_id, gpg)
+        sources = prepare_sources(store, output_id, commit_id, gpg)
         manifest["sources"] = sources
 
-        output_id, image_name = build_image(builddir, manifest, args)
+        output_id, image_name = build_image(store, manifest, args)
         print("")
         print("Pipeline for ostree image is done:")
         print("  output id:", output_id)
