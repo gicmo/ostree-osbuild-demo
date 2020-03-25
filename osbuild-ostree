@@ -135,13 +135,7 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def prepare_commit_manifest():
-    with open("manifests/f31-ostree-commit.json", "r") as fp:
-        manifest = json.load(fp)
-    return manifest
-
-
-def build_commit(store, manifest, args):
+def build_manifest(manifest, store, args):
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
@@ -166,6 +160,18 @@ def build_commit(store, manifest, args):
 
     if not r["success"]:
         raise BuildError
+
+    return r, pipeline
+
+
+def prepare_commit_manifest():
+    with open("manifests/f31-ostree-commit.json", "r") as fp:
+        manifest = json.load(fp)
+    return manifest
+
+
+def build_commit(store, manifest, args):
+    r, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
 
@@ -242,30 +248,7 @@ def prepare_image_pipeline(commit_id):
 
 
 def build_image(store, manifest, args):
-    sources = manifest.get("sources", {})
-    pipeline = manifest["pipeline"]
-    pipeline = osbuild.load(pipeline, sources)
-
-    print("Building the following pipeline:")
-    print_pipeline(pipeline, store)
-
-    print("")
-    stages = pipeline.stages
-    if pipeline.build:
-        stages = pipeline.build.stages + stages
-    for stage in stages:
-        if stage.name == "org.osbuild.rpm":
-            print(f"checkpointing rpm stage: {stage.id}")
-            stage.checkpoint = True
-
-    libdir = find_osbuild_module()
-
-    r = pipeline.run(store.store,
-                     interactive=True,
-                     libdir=libdir)
-
-    if not r["success"]:
-        raise BuildError
+    r, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
