@@ -135,10 +135,13 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def build_commit(store, args):
-
+def prepare_commit_manifest():
     with open("manifests/f31-ostree-commit.json", "r") as fp:
         manifest = json.load(fp)
+    return manifest
+
+
+def build_commit(store, manifest, args):
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
@@ -281,7 +284,8 @@ def build(args):
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
     try:
-        output_id, commit_id = build_commit(store, args)
+        manifest = prepare_commit_manifest()
+        output_id, commit_id = build_commit(store, manifest, args)
 
         print("")
         print("Pipeline for ostree commit is done:")
