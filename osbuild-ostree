@@ -314,9 +314,10 @@ def build(args):
         print("      image:", image_name)
 
         image_abspath = store.resolve_ref(output_id)
+        image_relpath = os.path.relpath(image_abspath, os.path.curdir)
         print("")
         print("Image ready at:")
-        print(f"  {image_abspath}")
+        print(f"  {image_relpath}")
 
         info["image"] = {
             "output_id": output_id,
