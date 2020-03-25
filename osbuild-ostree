@@ -283,6 +283,8 @@ def build(args):
     builddir = os.path.abspath("build")
     os.makedirs(builddir, exist_ok=True)
 
+    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
+
     try:
         output_id, commit_id = build_commit(builddir, args)
 
@@ -311,9 +313,10 @@ def build(args):
         print("  output id:", output_id)
         print("      image:", image_name)
 
+        image_abspath = store.resolve_ref(output_id)
         print("")
         print("Image ready at:")
-        print(f"  {builddir}/store/refs/{output_id}/{image_name}")
+        print(f"  {image_abspath}")
 
         info["image"] = {
             "output_id": output_id,
