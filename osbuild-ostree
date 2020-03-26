@@ -135,15 +135,10 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def build_commit(builddir, args):
-
-    with open("manifests/f31-ostree-commit.json", "r") as fp:
-        manifest = json.load(fp)
+def build_manifest(manifest, store, args):
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
-
-    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
     print("Building the following pipeline:")
     print_pipeline(pipeline, store)
@@ -165,6 +160,18 @@ def build_commit(builddir, args):
 
     if not r["success"]:
         raise BuildError
+
+    return r, pipeline
+
+
+def prepare_commit_manifest():
+    with open("manifests/f31-ostree-commit.json", "r") as fp:
+        manifest = json.load(fp)
+    return manifest
+
+
+def build_commit(store, manifest, args):
+    r, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
 
@@ -205,11 +212,10 @@ def sign_commit(builddir, info):
     return res
 
 
-def prepare_sources(builddir, output_id, commit_id, gpg):
+def prepare_sources(store, output_id, commit_id, gpg):
     with open("manifests/f31-ostree-image.json", "r") as fp:
         manifest = json.load(fp)
 
-    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
     obj = store.resolve_ref(output_id)
     url = "file://" + os.path.join(obj, "repo")
     sources = manifest["sources"]
@@ -241,33 +247,8 @@ def prepare_image_pipeline(commit_id):
     return manifest
 
 
-def build_image(builddir, manifest, args):
-    sources = manifest.get("sources", {})
-    pipeline = manifest["pipeline"]
-    pipeline = osbuild.load(pipeline, sources)
-
-    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
-
-    print("Building the following pipeline:")
-    print_pipeline(pipeline, store)
-
-    print("")
-    stages = pipeline.stages
-    if pipeline.build:
-        stages = pipeline.build.stages + stages
-    for stage in stages:
-        if stage.name == "org.osbuild.rpm":
-            print(f"checkpointing rpm stage: {stage.id}")
-            stage.checkpoint = True
-
-    libdir = find_osbuild_module()
-
-    r = pipeline.run(store.store,
-                     interactive=True,
-                     libdir=libdir)
-
-    if not r["success"]:
-        raise BuildError
+def build_image(store, manifest, args):
+    r, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
@@ -283,8 +264,11 @@ def build(args):
     builddir = os.path.abspath("build")
     os.makedirs(builddir, exist_ok=True)
 
+    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
+
     try:
-        output_id, commit_id = build_commit(builddir, args)
+        manifest = prepare_commit_manifest()
+        output_id, commit_id = build_commit(store, manifest, args)
 
         print("")
         print("Pipeline for ostree commit is done:")
@@ -302,18 +286,20 @@ def build(args):
         gpg = sign_commit(builddir, info)
 
         manifest = prepare_image_pipeline(commit_id)
-        sources = prepare_sources(builddir, output_id, commit_id, gpg)
+        sources = prepare_sources(store, output_id, commit_id, gpg)
         manifest["sources"] = sources
 
-        output_id, image_name = build_image(builddir, manifest, args)
+        output_id, image_name = build_image(store, manifest, args)
         print("")
         print("Pipeline for ostree image is done:")
         print("  output id:", output_id)
         print("      image:", image_name)
 
+        image_abspath = store.resolve_ref(output_id)
+        image_relpath = os.path.relpath(image_abspath, os.path.curdir)
         print("")
         print("Image ready at:")
-        print(f"  {builddir}/store/refs/{output_id}/{image_name}")
+        print(f"  {image_relpath}")
 
         info["image"] = {
             "output_id": output_id,

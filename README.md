@@ -13,6 +13,7 @@ git clone --recurisve
 ```
 
 The dependencies to run it are:
+  - ostree
   - rpm
   - systemd-container
 
