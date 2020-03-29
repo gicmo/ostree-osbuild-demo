@@ -1249,7 +1249,10 @@
       }
     ],
     "assembler": {
-      "name": "org.osbuild.ostree.commit"
+      "name": "org.osbuild.ostree.commit",
+      "options": {
+        "ref": "fedora/x86_64/osbuild-demo"
+      }
     }
   }
 }

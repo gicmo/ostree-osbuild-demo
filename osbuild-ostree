@@ -241,6 +241,9 @@ def prepare_image_pipeline(commit_id):
 
     for stage in manifest["pipeline"]["stages"]:
         options = stage.get("options")
+        if stage["name"] in ["org.osbuild.selinux"]:
+            options = options.get("ostree", {})
+
         if not options or "commit" not in options:
             continue
         options["commit"] = commit_id
@@ -260,6 +263,11 @@ def write_info(builddir, info):
         json.dump(info, f)
 
 
+def write_manifest(manifest, name, builddir):
+     with open(f"{builddir}/{name}-manifest.json", "w+") as f:
+         json.dump(manifest, f, indent=2)
+
+
 def build(args):
     builddir = os.path.abspath("build")
     os.makedirs(builddir, exist_ok=True)
@@ -268,6 +276,8 @@ def build(args):
 
     try:
         manifest = prepare_commit_manifest()
+        write_manifest(manifest, "commit", builddir)
+
         output_id, commit_id = build_commit(store, manifest, args)
 
         print("")
@@ -288,6 +298,8 @@ def build(args):
         manifest = prepare_image_pipeline(commit_id)
         sources = prepare_sources(store, output_id, commit_id, gpg)
         manifest["sources"] = sources
+
+        write_manifest(manifest, "image", builddir)
 
         output_id, image_name = build_image(store, manifest, args)
         print("")
