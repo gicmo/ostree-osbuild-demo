@@ -90,7 +90,7 @@ def remove_path(path):
             fixperms(p)
             unlink(p)
         else:
-            raise
+            raise e
 
     shutil.rmtree(path, onerror=on_error)
 
