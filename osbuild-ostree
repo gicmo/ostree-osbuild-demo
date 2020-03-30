@@ -264,8 +264,8 @@ def write_info(builddir, info):
 
 
 def write_manifest(manifest, name, builddir):
-     with open(f"{builddir}/{name}-manifest.json", "w+") as f:
-         json.dump(manifest, f, indent=2)
+    with open(f"{builddir}/{name}-manifest.json", "w+") as f:
+        json.dump(manifest, f, indent=2)
 
 
 def build(args):
