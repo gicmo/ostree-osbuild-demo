@@ -327,6 +327,7 @@ def build(args):
         print()
         print(f"{RESET}{BOLD}{RED}Failed{RESET}")
         return 1
+    return 0
 
 
 def clean(_args):
@@ -369,6 +370,7 @@ def main():
         return clean(args)
     if args.cmd == "boot":
         return boot(args)
+    return 1
 
 
 if __name__ == "__main__":
