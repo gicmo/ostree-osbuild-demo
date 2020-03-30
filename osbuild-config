@@ -214,7 +214,7 @@ def main():
         manifest_add_build_pipeline(commit, builder)
 
         image = prepare_image_manifest(config, arch)
-        manifest_add_build_pipeline(commit, builder)
+        manifest_add_build_pipeline(image, builder)
 
     dest = config.get(f"commit-{arch}", "manifest")
     with open(dest, "w") as f:
