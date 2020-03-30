@@ -1,0 +1,13 @@
+repos:
+  - fedora
+packages:
+  - rpm
+  - dosfstools
+  - e2fsprogs
+  - policycoreutils
+  - qemu-img
+  - rpm-ostree
+  - systemd
+  - xfsprogs
+  - tree
+runner: org.osbuild.fedora31
