@@ -1,0 +1,229 @@
+#!/usr/bin/python3
+
+import configparser
+import json
+import os
+import sys
+import tempfile
+import urllib.request
+import yaml
+
+import dnf
+import dnf.conf
+import dnf.conf.read
+import hawkey
+
+
+class DepSolver:
+    def __init__(self, arch, relver, dirs):
+        self.base = dnf.Base()
+        self.arch = arch
+        conf = self.base.conf
+        conf.config_file_path = "/dev/null"
+        conf.persistdir = dirs["persistdir"]
+        conf.cachedir = dirs["cachedir"]
+        conf.substitutions["arch"] = arch
+        conf.substitutions["basearch"] = dnf.rpm.basearch(arch)
+        conf.substitutions["releasever"] = relver
+        conf.reposdir = [dirs["repodir"]]
+        self.repos = self.read_repos()
+
+    def read_repos(self):
+        conf = self.base.conf
+        reader = dnf.conf.read.RepoReader(conf, {})
+        return {r.id: r for r in reader}
+
+    def resolve(self, manifest):
+
+        base = self.base
+        base.reset(goal=True, repos=True, sack=True)
+
+        gpgkeys = []
+
+        for repo_id in manifest["repos"]:
+            if repo_id not in self.repos:
+                raise ValueError("fUnknown repo: {repo_id}")
+            repo = self.repos[repo_id]
+            base.repos.add(repo)
+            for key in repo.gpgkey:
+                with urllib.request.urlopen(key) as r:
+                    gpgkeys.append(r.read().decode("utf-8"))
+
+        base.fill_sack(load_system_repo=False)
+
+        include = manifest["packages"]
+        exclude = manifest.get("packages-exclude", [])
+        base.install_specs(include, exclude=exclude)
+        base.resolve()
+
+        deps = []
+        for tsi in base.transaction:
+            # avoid using the install_set() helper, as it does not guarantee a stable order
+            if tsi.action not in dnf.transaction.FORWARD_ACTIONS:
+                continue
+            package = tsi.pkg
+
+            checksum_id = hawkey.chksum_name(package.chksum[0])
+            checksum = package.chksum[1].hex()
+            deps.append({
+                "name": package.name,
+                "epoch": package.epoch,
+                "version": package.version,
+                "release": package.release,
+                "arch": package.arch,
+                "repo_id": package.reponame,
+                "path": package.relativepath,
+                "remote_location": package.remote_location(),
+                "checksum": f"{checksum_id}:{checksum}",
+            })
+
+        ret = {
+            "dependencies": deps,
+            "gpgkeys": gpgkeys
+        }
+        return ret
+
+
+def gen_rpm_stage_data(data):
+    checksums = []
+    urls = {}
+    for pkg in data["dependencies"]:
+        checksum = pkg["checksum"]
+        checksums.append(checksum)
+        urls[checksum] = pkg["remote_location"]
+
+    return urls, checksums
+
+
+def manifest_update_packages(manifest, pkgs):
+    urls, checksums = gen_rpm_stage_data(pkgs)
+
+    sources = manifest["sources"]
+    sources["org.osbuild.files"]["urls"].update(urls)
+
+    pipeline = manifest["pipeline"]
+    rpmstage = None
+    for stage in pipeline["stages"]:
+        if stage["name"] == "org.osbuild.rpm":
+            rpmstage = stage
+            break
+    if not rpmstage:
+        raise RuntimeError("Failed to find rpm stage")
+
+    rpmstage["options"]["gpgkeys"] = pkgs["gpgkeys"]
+    rpmstage["options"]["packages"] = checksums
+
+
+def manifest_add_build_pipeline(manifest, builder):
+    pipeline = builder["pipeline"]
+    sources = builder["sources"]
+    runner = builder["runner"]
+
+    print(json.dumps(manifest["pipeline"]["build"], indent=2))
+    manifest["pipeline"]["build"]["pipeline"] = pipeline
+    print(json.dumps(manifest["pipeline"]["build"], indent=2))
+    manifest["pipeline"]["build"]["runner"] = runner
+    manifest["sources"]["org.osbuild.files"].update(sources)
+
+
+def prepare_build_manifest(config, solver):
+    print("Preparing the build pipeline manifest:")
+
+    manifest = {
+        "pipeline": {
+            "stages": [
+                {
+                    "name": "org.osbuild.rpm",
+                    "options": {}
+                }
+            ]
+        },
+        "runner": None,
+        "sources": {
+            "org.osbuild.files": {
+                "urls": {}
+            }
+        },
+    }
+
+    arch = solver.arch
+    treefile = config.get(f"buildroot-{arch}", "tree_file")
+    with open(treefile) as f:
+        treespec = yaml.safe_load(f)
+
+    print("  Generating package list and sources")
+    pkgs = solver.resolve(treespec)
+    manifest_update_packages(manifest, pkgs)
+
+    manifest["runner"] = treespec["runner"]
+    return manifest
+
+
+def prepare_commit_manifest(config, treespec, solver):
+    print("Preparing the commit manifest:")
+
+    arch = solver.arch
+    section = f"commit-{arch}"
+
+    templatefile = config.get(section, "template")
+    with open(templatefile, "r") as fp:
+        manifest = json.load(fp)
+
+    print("  Generating package list and sources")
+    pkgs = solver.resolve(treespec)
+
+    manifest_update_packages(manifest, pkgs)
+    return manifest
+
+
+def prepare_image_manifest(config, arch):
+    section = f"image-{arch}"
+
+    templatefile = config.get(section, "template")
+    with open(templatefile, "r") as fp:
+        manifest = json.load(fp)
+
+    return manifest
+
+
+def main():
+    builddir = os.path.abspath(f"build")
+
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    arch = config.get("DEFAULT", "arch")
+    relver = config.get("DEFAULT", "release")
+    tree_file = config.get("DEFAULT", "tree_file")
+
+    with open(tree_file, "r") as f:
+        treespec = yaml.unsafe_load(f)
+
+    with tempfile.TemporaryDirectory() as persistdir:
+        dirs = {
+            "repodir": os.path.curdir,
+            "cachedir": os.path.join(builddir, "dnf-cache"),
+            "persistdir": persistdir
+        }
+
+        solver = DepSolver(arch, str(relver), dirs)
+
+        builder = prepare_build_manifest(config, solver)
+
+        commit = prepare_commit_manifest(config, treespec, solver)
+        manifest_add_build_pipeline(commit, builder)
+
+        image = prepare_image_manifest(config, arch)
+        manifest_add_build_pipeline(commit, builder)
+
+    dest = config.get(f"commit-{arch}", "manifest")
+    with open(dest, "w") as f:
+        json.dump(commit, f, indent=2)
+
+    dest = config.get(f"image-{arch}", "manifest")
+    with open(dest, "w") as f:
+        json.dump(image, f, indent=2)
+
+
+if __name__ == "__main__":
+    sys.exit(main())
