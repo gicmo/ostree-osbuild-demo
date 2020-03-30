@@ -135,7 +135,7 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def build_manifest(manifest, store, args):
+def build_manifest(manifest, store, _args):
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
@@ -171,7 +171,7 @@ def prepare_commit_manifest():
 
 
 def build_commit(store, manifest, args):
-    r, pipeline = build_manifest(manifest, store, args)
+    _, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
 
@@ -251,7 +251,7 @@ def prepare_image_pipeline(commit_id):
 
 
 def build_image(store, manifest, args):
-    r, pipeline = build_manifest(manifest, store, args)
+    _, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
@@ -329,7 +329,7 @@ def build(args):
         return 1
 
 
-def clean(args):
+def clean(_args):
     path = os.path.abspath("build")
     print(f"About to clean up {path}.")
     try:
