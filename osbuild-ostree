@@ -10,7 +10,7 @@ import sys
 # Hack to ensure with have the osbuild package available
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "osbuild"))
-import osbuild
+import osbuild  #pylint: disable=wrong-import-position
 
 
 RESET = "\033[0m"
@@ -30,7 +30,7 @@ def genisoimage(outdir, datdir):
         f"{datdir}/user-data",
         f"{datdir}/meta-data"]
 
-    subprocess.run(args)
+    subprocess.run(args, check=True)
 
 
 def boot(args):
@@ -58,7 +58,7 @@ def boot(args):
             "-net", "nic,model=virtio",
             "-net", "user,hostfwd=tcp::2222-:22,hostfwd=tcp::9091-:9090",
             path]
-    r = subprocess.run(args)
+    r = subprocess.run(args, check=False)
     return r.returncode
 
 
