@@ -80,7 +80,7 @@ def remove_path(path):
         except FileNotFoundError:
             pass
 
-    def on_error(fn, p, exc_info):
+    def on_error(_fn, p, exc_info):
         e = exc_info[0]
         if issubclass(e, FileNotFoundError):
             pass
