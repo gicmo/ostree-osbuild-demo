@@ -116,14 +116,12 @@ def manifest_update_packages(manifest, pkgs):
 
 def manifest_add_build_pipeline(manifest, builder):
     pipeline = builder["pipeline"]
-    sources = builder["sources"]
     runner = builder["runner"]
+    urls = builder["sources"]["org.osbuild.files"]["urls"]
 
-    print(json.dumps(manifest["pipeline"]["build"], indent=2))
     manifest["pipeline"]["build"]["pipeline"] = pipeline
-    print(json.dumps(manifest["pipeline"]["build"], indent=2))
     manifest["pipeline"]["build"]["runner"] = runner
-    manifest["sources"]["org.osbuild.files"].update(sources)
+    manifest["sources"]["org.osbuild.files"]["urls"].update(urls)
 
 
 def prepare_build_manifest(config, solver):
