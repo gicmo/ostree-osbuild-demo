@@ -29,6 +29,7 @@ class GPGCommand:
         self.home = home
         self.binary = binary
 
+    # pylint: disable=redefined-builtin
     def run(self, *args, input=None, check=True):
         env = os.environ.copy()
         env["GNUPGHOME"] = self.home
@@ -64,7 +65,7 @@ class GPGCommand:
         return r
 
 
-def generate_keypair(args):
+def generate_keypair(_args):
     this_path = os.path.dirname(__file__)
     home = os.path.join(this_path, "gpghome")
 
