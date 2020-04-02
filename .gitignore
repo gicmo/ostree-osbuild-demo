@@ -2,3 +2,4 @@ build/
 gpghome/
 signing.ini
 tmp/
+.idea/
