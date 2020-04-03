@@ -579,7 +579,13 @@
         "options": {
           "commit": "",
           "osname": "fedora",
-          "ref": "fedora/x86_64/osbuild-demo",
+          "ref": "osbuild:fedora/x86_64/osbuild-demo",
+          "remotes": [
+            {
+              "name": "osbuild",
+              "url": "http://10.0.2.2:8000/"
+            }
+          ],
           "mounts": [
             {
               "path": "/boot"
