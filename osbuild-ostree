@@ -170,19 +170,6 @@ def prepare_commit_manifest():
     return manifest
 
 
-def build_commit(store, manifest, args):
-    _, pipeline = build_manifest(manifest, store, args)
-
-    output_id = pipeline.output_id
-
-    obj = store.resolve_ref(output_id)
-    with open(f"{obj}/compose.json") as fp:
-        commit_meta = json.load(fp)
-        commit_id = commit_meta["ostree-commit"]
-
-    return output_id, commit_id
-
-
 def sign_commit(builddir, info):
     output_id = info["ostree"]["output_id"]
     commit_id = info["ostree"]["commit_id"]
@@ -250,14 +237,6 @@ def prepare_image_pipeline(commit_id):
     return manifest
 
 
-def build_image(store, manifest, args):
-    _, pipeline = build_manifest(manifest, store, args)
-
-    output_id = pipeline.output_id
-    image_name = pipeline.assembler.options["filename"]
-    return output_id, image_name
-
-
 def write_info(builddir, info):
     with open(f"{builddir}/info.json", "w+") as f:
         json.dump(info, f)
@@ -266,6 +245,27 @@ def write_info(builddir, info):
 def write_manifest(manifest, name, builddir):
     with open(f"{builddir}/{name}-manifest.json", "w+") as f:
         json.dump(manifest, f, indent=2)
+
+
+def build_commit(store, manifest, args):
+    _, pipeline = build_manifest(manifest, store, args)
+
+    output_id = pipeline.output_id
+
+    obj = store.resolve_ref(output_id)
+    with open(f"{obj}/compose.json") as fp:
+        commit_meta = json.load(fp)
+        commit_id = commit_meta["ostree-commit"]
+
+    return output_id, commit_id
+
+
+def build_image(store, manifest, args):
+    _, pipeline = build_manifest(manifest, store, args)
+
+    output_id = pipeline.output_id
+    image_name = pipeline.assembler.options["filename"]
+    return output_id, image_name
 
 
 def build(args):
