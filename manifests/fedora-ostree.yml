@@ -15,6 +15,7 @@ packages:
   - spice-vdagent
   - xen-libs
   - fedora-repos-ostree
+  - polkit
 packages-x86_64:
   - grub2-efi-ia32
   - grub2-efi-x64
@@ -24,7 +25,7 @@ packages-x86_64:
   - shim-x64
 packages-exclude:
   - dracut-config-rescue
-  - Package
+  - PackageKit
 units:
   - cloud-config
   - cloud-final
