@@ -241,13 +241,15 @@ def write_info(builddir, info):
     with open(f"{builddir}/info.json", "w+") as f:
         json.dump(info, f)
 
-
 def write_manifest(manifest, name, builddir):
     with open(f"{builddir}/{name}-manifest.json", "w+") as f:
         json.dump(manifest, f, indent=2)
 
 
-def build_commit(store, manifest, args):
+def build_commit(store, builddir, args):
+    manifest = prepare_commit_manifest()
+    write_manifest(manifest, "commit", builddir)
+
     _, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
@@ -257,7 +259,21 @@ def build_commit(store, manifest, args):
         commit_meta = json.load(fp)
         commit_id = commit_meta["ostree-commit"]
 
-    return output_id, commit_id
+    print("")
+    print("Pipeline for ostree commit is done:")
+    print("  output id:", output_id)
+    print("  commit id:", commit_id)
+
+    info = {
+        "ostree": {
+            "output_id": output_id,
+            "commit_id": commit_id
+        }
+    }
+
+    write_info(builddir, info)
+
+    return info
 
 
 def build_image(store, manifest, args):
@@ -275,25 +291,12 @@ def build(args):
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
     try:
-        manifest = prepare_commit_manifest()
-        write_manifest(manifest, "commit", builddir)
-
-        output_id, commit_id = build_commit(store, manifest, args)
-
-        print("")
-        print("Pipeline for ostree commit is done:")
-        print("  output id:", output_id)
-        print("  commit id:", commit_id)
-
-        info = {
-            "ostree": {
-                "output_id": output_id,
-                "commit_id": commit_id
-            }
-        }
-        write_info(builddir, info)
+        info = build_commit(store, builddir, args)
 
         gpg = sign_commit(builddir, info)
+
+        commit_id = info["ostree"]["commit_id"]
+        output_id = info["ostree"]["output_id"]
 
         manifest = prepare_image_pipeline(commit_id)
         sources = prepare_sources(store, output_id, commit_id, gpg)
