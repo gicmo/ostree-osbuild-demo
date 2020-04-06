@@ -280,11 +280,40 @@ def build_commit(store, builddir, args):
     return info
 
 
-def build_image(store, manifest, args):
+def build_image(builddir, store, info, args):
+    commit_id = info["ostree"]["commit_id"]
+    output_id = info["ostree"]["output_id"]
+    gpg = info["ostree"]["gpg"]
+
+    manifest = prepare_image_pipeline(commit_id)
+    sources = prepare_sources(store, output_id, commit_id, gpg)
+    manifest["sources"] = sources
+
+    write_manifest(manifest, "image", builddir)
+
     _, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
+
+    print("")
+    print("Pipeline for ostree image is done:")
+    print("  output id:", output_id)
+    print("      image:", image_name)
+
+    image_abspath = store.resolve_ref(output_id)
+    image_relpath = os.path.relpath(image_abspath, os.path.curdir)
+    print("")
+    print("Image ready at:")
+    print(f"  {image_relpath}")
+
+    info["image"] = {
+        "output_id": output_id,
+        "name": image_name,
+    }
+
+    write_info(builddir, info)
+
     return output_id, image_name
 
 
@@ -297,34 +326,9 @@ def build(args):
     try:
         info = build_commit(store, builddir, args)
 
-        gpg = sign_commit(builddir, info)
+        sign_commit(builddir, info)
 
-        commit_id = info["ostree"]["commit_id"]
-        output_id = info["ostree"]["output_id"]
-
-        manifest = prepare_image_pipeline(commit_id)
-        sources = prepare_sources(store, output_id, commit_id, gpg)
-        manifest["sources"] = sources
-
-        write_manifest(manifest, "image", builddir)
-
-        output_id, image_name = build_image(store, manifest, args)
-        print("")
-        print("Pipeline for ostree image is done:")
-        print("  output id:", output_id)
-        print("      image:", image_name)
-
-        image_abspath = store.resolve_ref(output_id)
-        image_relpath = os.path.relpath(image_abspath, os.path.curdir)
-        print("")
-        print("Image ready at:")
-        print(f"  {image_relpath}")
-
-        info["image"] = {
-            "output_id": output_id,
-            "name": image_name,
-        }
-        write_info(builddir, info)
+        build_image(builddir, store, info, args)
 
     except KeyboardInterrupt:
         print()
