@@ -250,7 +250,7 @@ def write_manifest(manifest, name, builddir):
         json.dump(manifest, f, indent=2)
 
 
-def build_commit(store, builddir, args):
+def build_commit(builddir, store, info, args):
     manifest = prepare_commit_manifest()
     write_manifest(manifest, "commit", builddir)
 
@@ -268,12 +268,10 @@ def build_commit(store, builddir, args):
     print("  output id:", output_id)
     print("  commit id:", commit_id)
 
-    info = {
-        "ostree": {
-            "output_id": output_id,
-            "commit_id": commit_id
-        }
-    }
+    info["ostree"].update({
+        "output_id": output_id,
+        "commit_id": commit_id
+    })
 
     write_info(builddir, info)
 
@@ -324,7 +322,13 @@ def build(args):
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
     try:
-        info = build_commit(store, builddir, args)
+        with open(f"{builddir}/info.json", "r") as f:
+            info = json.load(f)
+    except FileNotFoundError:
+        info = {'ostree': {}}
+
+    try:
+        build_commit(builddir, store, info, args)
 
         sign_commit(builddir, info)
 
