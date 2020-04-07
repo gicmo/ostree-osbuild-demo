@@ -182,7 +182,7 @@ def sign_commit(builddir, info):
     }
 
     print("")
-    print("Signing commit:")
+    print(f"{BOLD}Signing commit:{RESET}")
 
     this_path = os.path.dirname(os.path.abspath(__file__))
     r = subprocess.run([f"{this_path}/sign-commit"],
@@ -254,6 +254,8 @@ def build_commit(builddir, store, info, args):
     manifest = prepare_commit_manifest()
     write_manifest(manifest, "commit", builddir)
 
+    print(f"{BOLD}Building the ostree commit:{RESET}")
+
     _, pipeline = build_manifest(manifest, store, args)
 
     output_id = pipeline.output_id
@@ -282,6 +284,8 @@ def build_image(builddir, store, info, args):
     commit_id = info["ostree"]["commit_id"]
     output_id = info["ostree"]["output_id"]
     gpg = info["ostree"]["gpg"]
+
+    print(f"{BOLD}Building the image{RESET}")
 
     manifest = prepare_image_pipeline(commit_id)
     sources = prepare_sources(store, output_id, commit_id, gpg)
