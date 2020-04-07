@@ -331,12 +331,17 @@ def build(args):
     except FileNotFoundError:
         info = {'ostree': {}}
 
+    target = args.target or ['commit', 'sign', 'image']
+
     try:
-        build_commit(builddir, store, info, args)
+        if 'commit' in target:
+            build_commit(builddir, store, info, args)
 
-        sign_commit(builddir, info)
+        if 'sign' in target:
+            sign_commit(builddir, info)
 
-        build_image(builddir, store, info, args)
+        if 'image' in target:
+            build_image(builddir, store, info, args)
 
     except KeyboardInterrupt:
         print()
@@ -367,7 +372,13 @@ def main():
     parser.set_defaults(cmd=None)
     sp = parser.add_subparsers(help='commands')
 
-    subpar = sp.add_parser("build", help='build the image')
+    subpar = sp.add_parser("build", help='build commit or image')
+    subpar.add_argument("--commit", dest='target', action='append_const', const="commit",
+                        help='build the commit')
+    subpar.add_argument("--sign", dest='target', action='append_const', const="sign",
+                        help='sign the commit')
+    subpar.add_argument("--image", dest='target', action='append_const', const="image",
+                        help='build the image')
     subpar.set_defaults(cmd='build')
 
     subpar = sp.add_parser("clean", help='cleanup the build dir')
