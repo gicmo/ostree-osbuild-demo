@@ -48,17 +48,20 @@ def boot(args):
 
     ovmfcode = "/usr/share/OVMF/OVMF_CODE.fd"
 
-    args = ['qemu-system-x86_64',
+    argv = ['qemu-system-x86_64',
             "-m", "2048",
             "-drive",
             f"file={ovmfcode},if=pflash,format=raw,unit=0,readonly=on",
             '-enable-kvm',
-            "-snapshot",
             f"-cdrom", f"{builddir}/cloudinit.iso",
             "-net", "nic,model=virtio",
             "-net", "user,hostfwd=tcp::2222-:22,hostfwd=tcp::9091-:9090",
             path]
-    r = subprocess.run(args, check=False)
+
+    if not args.persist:
+        argv.append("-snapshot")
+
+    r = subprocess.run(argv, check=False)
     return r.returncode
 
 
@@ -387,6 +390,8 @@ def main():
     subpar.set_defaults(cmd='clean')
 
     subpar = sp.add_parser("boot", help='boot the final image')
+    subpar.add_argument("--persist", action='store_true', default=False,
+                        help='make changes persistent')
     subpar.set_defaults(cmd='boot')
 
     args = parser.parse_args()
