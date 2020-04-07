@@ -1,0 +1,204 @@
+#!/usr/bin/python3
+
+import argparse
+import configparser
+import http.server
+import json
+import os
+import subprocess
+import socketserver
+import sys
+import tempfile
+from functools import partial
+
+
+RESET = "\033[0m"
+BOLD = "\033[1m"
+RED = "\033[31m"
+
+
+def ostree(*args, _input=None, _stdout=sys.stderr, **kwargs):
+    args = list(args) + [f'--{k}={v}' for k, v in kwargs.items()]
+    subprocess.run(["ostree"] + args,
+                   encoding="utf-8",
+                   stdout=_stdout,
+                   input=_input,
+                   check=True)
+
+
+def find_stage(pipeline, name):
+    for stage in pipeline["stages"]:
+        if stage["name"] == name:
+            return stage
+
+    raise ValueError(f"stage {name} not found")
+
+
+def find_remote(remotes, name):
+    for i, r in enumerate(remotes):
+        if r["name"] == name:
+            return i, r
+
+    return None, None
+
+
+def setup(_args):
+    builddir = os.path.abspath("build")
+
+    repo = f"{builddir}/repo"
+    ostree("init", mode="archive-z2", repo=repo)
+
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    arch = config.get("DEFAULT", "arch")
+    dest = config.get(f"image-{arch}", "manifest")
+
+    with open(dest, "r") as fp:
+        manifest = json.load(fp)
+
+    pipeline = manifest["pipeline"]
+    ostreestage = find_stage(pipeline, "org.osbuild.ostree")
+
+    ref = ostreestage["options"]["ref"]
+    todelete = None
+    if ":" in ref:
+        todelete, ref = ref.split(":", 1)
+    ostreestage["options"]["ref"] = f"osbuild:{ref}"
+
+    remotes = ostreestage["options"]["remotes"]
+    if todelete:
+        i, _ = find_remote(remotes, todelete)
+        if i is not None:
+            del remotes[i]
+
+    _, remote = find_remote(remotes, "osbuild")
+    if not remote:
+        remote = {"name": "osbuild"}
+        ostreestage["options"]["remotes"].append(remote)
+
+    remote["url"] = "http://10.0.2.2:8000/"
+
+    with open(dest, "w") as fp:
+        json.dump(manifest, fp, indent=2)
+
+
+def prepare(_args):
+    builddir = os.path.abspath("build")
+
+    with open(f"{builddir}/info.json", "r") as f:
+        info = json.load(f)
+
+    output_id = info["ostree"]["output_id"]
+    commit_id = info["ostree"]["commit_id"]
+
+    source = f"{builddir}/store/refs/{output_id}/repo"
+    repo = f"{builddir}/repo"
+
+    with tempfile.TemporaryFile(dir=builddir) as r:
+        ostree("refs", repo=source, _stdout=r)
+        r.seek(0)
+        refs = r.read().decode("utf-8").strip().split("\n")
+
+    ostree("pull-local", source, refs[0],
+           repo=repo)
+
+    config = configparser.ConfigParser()
+    config.read('config.ini')
+
+    arch = config.get("DEFAULT", "arch")
+    dest = config.get(f"commit-{arch}", "manifest")
+
+    with open(dest, "r") as fp:
+        manifest = json.load(fp)
+
+    pipeline = manifest["pipeline"]
+    assembler = pipeline["assembler"]
+    if assembler["name"] != "org.osbuild.ostree.commit":
+        raise ValueError(f"wrong assembler {assembler['name']}")
+
+    assembler["options"]["parent"] = commit_id
+
+    with open(dest, "w") as fp:
+        json.dump(manifest, fp, indent=2)
+
+    return 0
+
+
+def finish(_args):
+    builddir = os.path.abspath("build")
+
+    with open(f"{builddir}/info.json", "r") as f:
+        info = json.load(f)
+
+    output_id = info["ostree"]["output_id"]
+
+    source = f"{builddir}/store/refs/{output_id}/repo"
+    repo = f"{builddir}/repo"
+
+    with tempfile.TemporaryFile(dir=builddir) as r:
+        ostree("refs", repo=source, _stdout=r)
+        r.seek(0)
+        refs = r.read().decode("utf-8").strip().split("\n")
+
+    ostree("pull-local", source, refs[0],
+           repo=repo)
+
+    ostree("summary", "--update", repo=repo)
+    return 0
+
+
+def serve(args):
+    builddir = os.path.abspath("build")
+    repodir = os.path.join(builddir, "repo")
+
+    Handler = partial(http.server.SimpleHTTPRequestHandler,
+                      directory=repodir)
+
+    port = args.port
+    with socketserver.TCPServer(("", port), Handler) as httpd:
+        print(f"serving repo at {port}")
+        httpd.serve_forever()
+
+
+def main():
+    parser = argparse.ArgumentParser(description="osbuild ostree update tool")
+    parser.set_defaults(cmd=None)
+    sp = parser.add_subparsers(help='commands')
+
+    subpar = sp.add_parser("setup", help='Setup for the update')
+    subpar.set_defaults(cmd='setup')
+
+    subpar = sp.add_parser("prepare", help='Prepare an update')
+    subpar.set_defaults(cmd='prepare')
+
+    subpar = sp.add_parser("finish", help='Pull in an update')
+    subpar.set_defaults(cmd='finish')
+
+    subpar = sp.add_parser("serve", help='Serve updates')
+    subpar.add_argument('--port', default=8000, type=int)
+    subpar.set_defaults(cmd='serve')
+
+    args = parser.parse_args()
+
+    if not args.cmd:
+        print(f"{RED}Error{RESET}: Need command\n")
+        parser.print_help(sys.stderr)
+        return 1
+
+    if args.cmd == "setup":
+        r = setup(args)
+    elif args.cmd == "prepare":
+        r = prepare(args)
+    elif args.cmd == "finish":
+        r = finish(args)
+    elif args.cmd == "serve":
+        r = serve(args)
+    else:
+        r = -1
+
+    return r
+
+
+if __name__ == "__main__":
+    sys.exit(main())
