@@ -322,6 +322,8 @@ def build_image(builddir, store, info, args):
 def build(args):
     builddir = os.path.abspath("build")
     os.makedirs(builddir, exist_ok=True)
+    uid = int(os.getenv("SUDO_UID", os.getuid()))
+    os.chown(builddir, uid, os.getgid())
 
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
 
