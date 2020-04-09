@@ -181,8 +181,18 @@ def prepare_commit_manifest(config, treespec, solver):
 
     print("  Generating package list and sources")
     pkgs = solver.resolve(treespec)
-
     manifest_update_packages(manifest, pkgs)
+
+    units = treespec.get("units")
+    if units:
+        systemd = find_stage(manifest, "org.osbuild.systemd")
+        systemd["options"]["enabled_services"] = units
+
+    target = treespec.get("default_target") or treespec.get("default-target")
+    if target:
+        systemd = find_stage(manifest, "org.osbuild.systemd")
+        systemd["options"]["default_target"] = target
+
     return manifest
 
 
