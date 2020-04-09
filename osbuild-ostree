@@ -24,6 +24,7 @@ class BuildEnv:
         self.args = args
         self.builddir = args.builddir
         self._info = None
+        self._store = None
 
     def init(self):
         builddir = self.builddir
@@ -37,6 +38,14 @@ class BuildEnv:
         if not self._info:
             self._info = self.read_info()
         return self._info
+
+    @property
+    def store(self):
+        if not self._store:
+            self.init()
+            path = f"{self.builddir}/store"
+            self._store = osbuild.objectstore.ObjectStore(path)
+        return self._store
 
     def read_info(self):
         try:
@@ -290,7 +299,7 @@ def write_manifest(manifest, name, env):
 
 
 def build_commit(env, store):
-    info = env.info
+    info, store = env.info, env.store
     manifest = prepare_commit_manifest()
     write_manifest(manifest, "commit", env)
 
@@ -320,8 +329,8 @@ def build_commit(env, store):
     return info
 
 
-def build_image(env, store):
-    info = env.info
+def build_image(env):
+    info, store = env.info, env.store
     commit_id = info["ostree"]["commit_id"]
     output_id = info["ostree"]["output_id"]
     gpg = info["ostree"]["gpg"]
@@ -361,20 +370,17 @@ def build_image(env, store):
 
 
 def build(env):
-    builddir = env.init()
-
-    store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
     target = env.args.target or ['commit', 'sign', 'image']
 
     try:
         if 'commit' in target:
-            build_commit(env, store)
+            build_commit(env)
 
         if 'sign' in target:
             sign_commit(env)
 
         if 'image' in target:
-            build_image(env, store)
+            build_image(env)
 
     except KeyboardInterrupt:
         print()
