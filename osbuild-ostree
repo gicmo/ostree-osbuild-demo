@@ -18,6 +18,12 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
+class BuildEnv:
+    def __init__(self, args):
+        self.args = args
+        self.builddir = args.builddir
+
+
 def genisoimage(outdir, datdir):
     args = [
         "genisoimage",
@@ -33,8 +39,8 @@ def genisoimage(outdir, datdir):
     subprocess.run(args, check=True)
 
 
-def boot(args):
-    builddir = args.builddir
+def boot(env):
+    builddir = env.builddir
     with open(f"{builddir}/info.json", "r") as f:
         info = json.load(f)
 
@@ -58,7 +64,7 @@ def boot(args):
             "-net", "user,hostfwd=tcp::2222-:22,hostfwd=tcp::9091-:9090",
             path]
 
-    if not args.persist:
+    if not env.args.persist:
         argv.append("-snapshot")
 
     r = subprocess.run(argv, check=False)
@@ -137,7 +143,7 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def build_manifest(manifest, store, _args):
+def build_manifest(manifest, store, _env):
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
@@ -172,7 +178,8 @@ def prepare_commit_manifest():
     return manifest
 
 
-def sign_commit(builddir, info):
+def sign_commit(env, info):
+    builddir = env.builddir
     output_id = info["ostree"]["output_id"]
     commit_id = info["ostree"]["commit_id"]
     repo = f"{builddir}/store/refs/{output_id}/repo"
@@ -252,13 +259,14 @@ def write_manifest(manifest, name, builddir):
         json.dump(manifest, f, indent=2)
 
 
-def build_commit(builddir, store, info, args):
+def build_commit(env, store, info):
+    builddir = env.builddir
     manifest = prepare_commit_manifest()
     write_manifest(manifest, "commit", builddir)
 
     print(f"{BOLD}Building the ostree commit:{RESET}")
 
-    _, pipeline = build_manifest(manifest, store, args)
+    _, pipeline = build_manifest(manifest, store, env)
 
     output_id = pipeline.output_id
 
@@ -282,7 +290,8 @@ def build_commit(builddir, store, info, args):
     return info
 
 
-def build_image(builddir, store, info, args):
+def build_image(env, store, info):
+    builddir = env.builddir
     commit_id = info["ostree"]["commit_id"]
     output_id = info["ostree"]["output_id"]
     gpg = info["ostree"]["gpg"]
@@ -295,7 +304,7 @@ def build_image(builddir, store, info, args):
 
     write_manifest(manifest, "image", builddir)
 
-    _, pipeline = build_manifest(manifest, store, args)
+    _, pipeline = build_manifest(manifest, store, env)
 
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
@@ -321,8 +330,8 @@ def build_image(builddir, store, info, args):
     return output_id, image_name
 
 
-def build(args):
-    builddir = args.builddir
+def build(env):
+    builddir = env.builddir
     os.makedirs(builddir, exist_ok=True)
     uid = int(os.getenv("SUDO_UID", os.getuid()))
     os.chown(builddir, uid, os.getgid())
@@ -335,17 +344,17 @@ def build(args):
     except FileNotFoundError:
         info = {'ostree': {}}
 
-    target = args.target or ['commit', 'sign', 'image']
+    target = env.args.target or ['commit', 'sign', 'image']
 
     try:
         if 'commit' in target:
-            build_commit(builddir, store, info, args)
+            build_commit(env, store, info)
 
         if 'sign' in target:
-            sign_commit(builddir, info)
+            sign_commit(env, info)
 
         if 'image' in target:
-            build_image(builddir, store, info, args)
+            build_image(env, store, info)
 
     except KeyboardInterrupt:
         print()
@@ -358,8 +367,8 @@ def build(args):
     return 0
 
 
-def clean(args):
-    path = args.builddir
+def clean(env):
+    path = env.builddir
     print(f"About to clean up {path}.")
     try:
         s = input("Type 'Y' to confirm: ")
@@ -403,12 +412,14 @@ def main():
         parser.print_help(sys.stderr)
         return 1
 
+    env = BuildEnv(args)
+
     if args.cmd == "build":
-        return build(args)
+        return build(env)
     if args.cmd == "clean":
-        return clean(args)
+        return clean(env)
     if args.cmd == "boot":
-        return boot(args)
+        return boot(env)
     return 1
 
 
