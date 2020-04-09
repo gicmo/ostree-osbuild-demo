@@ -135,7 +135,7 @@ def has_signatures(repo, commit_id, gpg_home):
                        check=True,
                        capture_output=True)
 
-    m = re.search(r'Found (.*) signatures:', r.stdout)
+    m = re.search(r'Found (.*) signatures?:', r.stdout)
     if not m:
         return 0
     return int(m.group(1))
