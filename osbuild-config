@@ -1,5 +1,6 @@
 #!/usr/bin/python3
 
+import argparse
 import configparser
 import json
 import os
@@ -185,7 +186,16 @@ def prepare_image_manifest(config, arch):
 
 
 def main():
-    builddir = os.path.abspath(f"build")
+    parser = argparse.ArgumentParser(description="configure manifests")
+    parser.add_argument("--build-dir", metavar="DIR", type=os.path.abspath,
+                        default="build", dest="builddir",
+                        help="temporary directory to store build data")
+    args = parser.parse_args()
+
+    builddir = args.builddir
+    os.makedirs(builddir, exist_ok=True)
+    uid = int(os.getenv("SUDO_UID", os.getuid()))
+    os.chown(builddir, uid, os.getgid())
 
     config = configparser.ConfigParser()
     config.read('config.ini')
