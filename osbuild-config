@@ -104,10 +104,12 @@ def gen_rpm_stage_data(data):
     return urls, checksums
 
 
-def find_stage(manifest, name):
+def find_stage(manifest, name, ensure_options=True):
     pipeline = manifest["pipeline"]
     for stage in pipeline["stages"]:
         if stage["name"] == name:
+            if "options" not in stage:
+                stage["options"] = {}
             return stage
     return None
 
