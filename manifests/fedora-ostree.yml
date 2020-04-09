@@ -29,3 +29,5 @@ units:
   - cloud-final
   - cloud-init
   - cloud-init-local
+etc-group-members:
+  - wheel

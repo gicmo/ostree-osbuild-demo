@@ -1264,7 +1264,12 @@
         }
       },
       {
-        "name": "org.osbuild.rpm-ostree"
+        "name": "org.osbuild.rpm-ostree",
+        "options": {
+          "etc_group_members": [
+            "wheel"
+          ]
+        }
       }
     ],
     "assembler": {
