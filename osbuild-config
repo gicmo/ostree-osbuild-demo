@@ -104,18 +104,21 @@ def gen_rpm_stage_data(data):
     return urls, checksums
 
 
+def find_stage(manifest, name):
+    pipeline = manifest["pipeline"]
+    for stage in pipeline["stages"]:
+        if stage["name"] == name:
+            return stage
+    return None
+
+
 def manifest_update_packages(manifest, pkgs):
     urls, checksums = gen_rpm_stage_data(pkgs)
 
     sources = manifest["sources"]
     sources["org.osbuild.files"]["urls"].update(urls)
 
-    pipeline = manifest["pipeline"]
-    rpmstage = None
-    for stage in pipeline["stages"]:
-        if stage["name"] == "org.osbuild.rpm":
-            rpmstage = stage
-            break
+    rpmstage = find_stage(manifest, "org.osbuild.rpm")
     if not rpmstage:
         raise RuntimeError("Failed to find rpm stage")
 
