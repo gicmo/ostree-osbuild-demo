@@ -24,3 +24,8 @@ packages-x86_64:
 packages-exclude:
   - dracut-config-rescue
   - Package
+units:
+  - cloud-config
+  - cloud-final
+  - cloud-init
+  - cloud-init-local
