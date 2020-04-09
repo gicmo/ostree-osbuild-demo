@@ -24,12 +24,13 @@ class DepSolver:
     def __init__(self, arch, relver, dirs):
         self.base = dnf.Base()
         self.arch = arch
+        self.basearch = dnf.rpm.basearch(arch)
         conf = self.base.conf
         conf.config_file_path = "/dev/null"
         conf.persistdir = dirs["persistdir"]
         conf.cachedir = dirs["cachedir"]
         conf.substitutions["arch"] = arch
-        conf.substitutions["basearch"] = dnf.rpm.basearch(arch)
+        conf.substitutions["basearch"] = self.basearch
         conf.substitutions["releasever"] = relver
         conf.reposdir = [dirs["repodir"]]
         self.repos = self.read_repos()
@@ -58,7 +59,9 @@ class DepSolver:
         base.fill_sack(load_system_repo=False)
 
         include = manifest["packages"]
+        include += manifest.get(f"packages-{self.basearch}", [])
         exclude = manifest.get("packages-exclude", [])
+
         base.install_specs(include, exclude=exclude)
         base.resolve()
 
