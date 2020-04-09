@@ -1,9 +1,11 @@
 #!/usr/bin/python3
 
 import argparse
+import configparser
 import contextlib
 import json
 import os
+import platform
 import subprocess
 import shutil
 import sys
@@ -26,12 +28,27 @@ class BuildEnv:
         self._info = None
         self._store = None
 
+        self.config = configparser.ConfigParser()
+        if os.path.isfile(args.config):
+            self.config.read(args.config)
+
     def init(self):
         builddir = self.builddir
         os.makedirs(builddir, exist_ok=True)
         uid = int(os.getenv("SUDO_UID", os.getuid()))
         os.chown(builddir, uid, os.getgid())
         return self.builddir
+
+    @property
+    def arch(self):
+        cpu = platform.processor()
+        return self.config.get("DEFAULT", "arch", fallback=cpu)
+
+    def load_manifest(self, name):
+        section = f"{name}-{self.arch}"
+        path = self.config.get(section, "manifest")
+        with open(path, "r") as f:
+            return json.load(f)
 
     @property
     def info(self):
@@ -219,12 +236,6 @@ def build_manifest(manifest, store, _env):
     return r, pipeline
 
 
-def prepare_commit_manifest():
-    with open("manifests/f31-ostree-commit.json", "r") as fp:
-        manifest = json.load(fp)
-    return manifest
-
-
 def sign_commit(env):
     builddir, info = env.builddir, env.info
     output_id = info["ostree"]["output_id"]
@@ -259,10 +270,7 @@ def sign_commit(env):
     return res
 
 
-def prepare_sources(store, output_id, commit_id, gpg):
-    with open("manifests/f31-ostree-image.json", "r") as fp:
-        manifest = json.load(fp)
-
+def prepare_sources(manifest, store, output_id, commit_id, gpg):
     obj = store.resolve_ref(output_id)
     url = "file://" + os.path.join(obj, "repo")
     sources = manifest["sources"]
@@ -279,13 +287,8 @@ def prepare_sources(store, output_id, commit_id, gpg):
         }
     }
 
-    return sources
 
-
-def prepare_image_pipeline(commit_id):
-    with open("manifests/f31-ostree-image.json", "r") as fp:
-        manifest = json.load(fp)
-
+def prepare_image_pipeline(manifest, commit_id):
     for stage in manifest["pipeline"]["stages"]:
         options = stage.get("options")
         if stage["name"] in ["org.osbuild.selinux"]:
@@ -294,12 +297,11 @@ def prepare_image_pipeline(commit_id):
         if not options or "commit" not in options:
             continue
         options["commit"] = commit_id
-    return manifest
 
 
 def build_commit(env):
     info, store = env.info, env.store
-    manifest = prepare_commit_manifest()
+    manifest = env.load_manifest("commit")
     env.write_manifest(manifest, "commit")
 
     print(f"{BOLD}Building the ostree commit:{RESET}")
@@ -336,9 +338,9 @@ def build_image(env):
 
     print(f"{BOLD}Building the image{RESET}")
 
-    manifest = prepare_image_pipeline(commit_id)
-    sources = prepare_sources(store, output_id, commit_id, gpg)
-    manifest["sources"] = sources
+    manifest = env.load_manifest("image")
+    prepare_image_pipeline(manifest, commit_id)
+    prepare_sources(manifest, store, output_id, commit_id, gpg)
 
     env.write_manifest(manifest, "image")
 
@@ -410,6 +412,9 @@ def main():
     parser.add_argument("--build-dir", metavar="DIR", type=os.path.abspath,
                         default="build", dest="builddir",
                         help="temporary directory to store build data")
+    parser.add_argument("--config", metavar="FILE", type=os.path.abspath,
+                        default="config.ini", dest="config",
+                        help="Build configuration")
     parser.set_defaults(cmd=None)
     sp = parser.add_subparsers(help='commands')
 
