@@ -15,6 +15,11 @@ import dnf.conf.read
 import hawkey
 
 
+RESET = "\033[0m"
+BOLD = "\033[1m"
+RED = "\033[31m"
+
+
 class DepSolver:
     def __init__(self, arch, relver, dirs):
         self.base = dnf.Base()
@@ -187,6 +192,9 @@ def prepare_image_manifest(config, arch):
 
 def main():
     parser = argparse.ArgumentParser(description="configure manifests")
+    parser.add_argument("--config", metavar="FILE", type=os.path.abspath,
+                        default="config.ini", dest="config",
+                        help="Build configuration")
     parser.add_argument("--build-dir", metavar="DIR", type=os.path.abspath,
                         default="build", dest="builddir",
                         help="temporary directory to store build data")
@@ -198,7 +206,8 @@ def main():
     os.chown(builddir, uid, os.getgid())
 
     config = configparser.ConfigParser()
-    config.read('config.ini')
+    print(f"Using {BOLD}{args.config}{RESET}")
+    config.read(args.config)
 
     arch = config.get("DEFAULT", "arch")
     relver = config.get("DEFAULT", "release")
