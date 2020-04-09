@@ -193,6 +193,11 @@ def prepare_commit_manifest(config, treespec, solver):
         systemd = find_stage(manifest, "org.osbuild.systemd")
         systemd["options"]["default_target"] = target
 
+    groups = treespec.get("etc-group-members")
+    if groups:
+        rpmostree = find_stage(manifest, "org.osbuild.rpm-ostree")
+        rpmostree["options"]["etc_group_members"] = groups
+
     return manifest
 
 
