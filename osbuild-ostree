@@ -23,6 +23,25 @@ class BuildEnv:
     def __init__(self, args):
         self.args = args
         self.builddir = args.builddir
+        self._info = None
+
+    @property
+    def info(self):
+        if not self._info:
+            self._info = self.read_info()
+        return self._info
+
+    def read_info(self):
+        try:
+            with self.open("info.json", mode='r') as f:
+                info = json.load(f)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            info = {'ostree': {}}
+        return info
+
+    def write_info(self):
+        with self.open("info.json", mode='w') as f:
+            json.dump(self.info, f)
 
     @contextlib.contextmanager
     def open(self, *path, mode='r'):
@@ -50,9 +69,7 @@ def genisoimage(outdir, datdir):
 
 
 def boot(env):
-    builddir = env.builddir
-    with open(f"{builddir}/info.json", "r") as f:
-        info = json.load(f)
+    builddir, info = env.builddir, env.info
 
     output_id = info["image"]["output_id"]
     image_name = info["image"]["name"]
@@ -188,8 +205,8 @@ def prepare_commit_manifest():
     return manifest
 
 
-def sign_commit(env, info):
-    builddir = env.builddir
+def sign_commit(env):
+    builddir, info = env.builddir, env.info
     output_id = info["ostree"]["output_id"]
     commit_id = info["ostree"]["commit_id"]
     repo = f"{builddir}/store/refs/{output_id}/repo"
@@ -217,7 +234,7 @@ def sign_commit(env, info):
     res = json.loads(r.stdout)
 
     info["ostree"]["gpg"] = res
-    write_info(builddir, info)
+    env.write_info()
 
     return res
 
@@ -260,17 +277,13 @@ def prepare_image_pipeline(commit_id):
     return manifest
 
 
-def write_info(builddir, info):
-    with open(f"{builddir}/info.json", "w+") as f:
-        json.dump(info, f)
-
 def write_manifest(manifest, name, env):
     with env.open(f"{name}-manifest.json", mode="w+") as f:
         json.dump(manifest, f, indent=2)
 
 
-def build_commit(env, store, info):
-    builddir = env.builddir
+def build_commit(env, store):
+    info = env.info
     manifest = prepare_commit_manifest()
     write_manifest(manifest, "commit", env)
 
@@ -295,13 +308,13 @@ def build_commit(env, store, info):
         "commit_id": commit_id
     })
 
-    write_info(builddir, info)
+    env.write_info()
 
     return info
 
 
-def build_image(env, store, info):
-    builddir = env.builddir
+def build_image(env, store):
+    info = env.info
     commit_id = info["ostree"]["commit_id"]
     output_id = info["ostree"]["output_id"]
     gpg = info["ostree"]["gpg"]
@@ -335,7 +348,7 @@ def build_image(env, store, info):
         "name": image_name,
     }
 
-    write_info(builddir, info)
+    env.write_info()
 
     return output_id, image_name
 
@@ -347,24 +360,17 @@ def build(env):
     os.chown(builddir, uid, os.getgid())
 
     store = osbuild.objectstore.ObjectStore(f"{builddir}/store")
-
-    try:
-        with open(f"{builddir}/info.json", "r") as f:
-            info = json.load(f)
-    except FileNotFoundError:
-        info = {'ostree': {}}
-
     target = env.args.target or ['commit', 'sign', 'image']
 
     try:
         if 'commit' in target:
-            build_commit(env, store, info)
+            build_commit(env, store)
 
         if 'sign' in target:
-            sign_commit(env, info)
+            sign_commit(env)
 
         if 'image' in target:
-            build_image(env, store, info)
+            build_image(env, store)
 
     except KeyboardInterrupt:
         print()
