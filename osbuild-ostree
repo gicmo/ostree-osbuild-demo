@@ -34,7 +34,7 @@ def genisoimage(outdir, datdir):
 
 
 def boot(args):
-    builddir = "build"
+    builddir = args.builddir
     with open(f"{builddir}/info.json", "r") as f:
         info = json.load(f)
 
@@ -67,7 +67,6 @@ def boot(args):
 
 class BuildError(Exception):
     pass
-
 
 def remove_path(path):
     def fixperms(p):
@@ -323,7 +322,7 @@ def build_image(builddir, store, info, args):
 
 
 def build(args):
-    builddir = os.path.abspath("build")
+    builddir = args.builddir
     os.makedirs(builddir, exist_ok=True)
     uid = int(os.getenv("SUDO_UID", os.getuid()))
     os.chown(builddir, uid, os.getgid())
@@ -359,8 +358,8 @@ def build(args):
     return 0
 
 
-def clean(_args):
-    path = os.path.abspath("build")
+def clean(args):
+    path = args.builddir
     print(f"About to clean up {path}.")
     try:
         s = input("Type 'Y' to confirm: ")
@@ -374,6 +373,9 @@ def clean(_args):
 
 def main():
     parser = argparse.ArgumentParser(description="osbuild ostree demo")
+    parser.add_argument("--build-dir", metavar="DIR", type=os.path.abspath,
+                        default="build", dest="builddir",
+                        help="temporary directory to store build data")
     parser.set_defaults(cmd=None)
     sp = parser.add_subparsers(help='commands')
 
