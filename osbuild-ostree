@@ -267,8 +267,6 @@ def sign_commit(env):
     info["ostree"]["gpg"] = res
     env.write_info()
 
-    return res
-
 
 def prepare_sources(manifest, store, output_id, commit_id, gpg):
     obj = store.resolve_ref(output_id)
@@ -327,8 +325,6 @@ def build_commit(env):
 
     env.write_info()
 
-    return info
-
 
 def build_image(env):
     info, store = env.info, env.store
@@ -366,8 +362,6 @@ def build_image(env):
     }
 
     env.write_info()
-
-    return output_id, image_name
 
 
 def build(env):
