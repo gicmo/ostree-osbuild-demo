@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import contextlib
 import json
 import os
 import subprocess
@@ -22,6 +23,15 @@ class BuildEnv:
     def __init__(self, args):
         self.args = args
         self.builddir = args.builddir
+
+    @contextlib.contextmanager
+    def open(self, *path, mode='r'):
+        full_path = os.path.join(self.builddir, *path)
+        f = open(full_path, mode)
+        try:
+            yield f
+        finally:
+            f.close()
 
 
 def genisoimage(outdir, datdir):
@@ -254,15 +264,15 @@ def write_info(builddir, info):
     with open(f"{builddir}/info.json", "w+") as f:
         json.dump(info, f)
 
-def write_manifest(manifest, name, builddir):
-    with open(f"{builddir}/{name}-manifest.json", "w+") as f:
+def write_manifest(manifest, name, env):
+    with env.open(f"{name}-manifest.json", mode="w+") as f:
         json.dump(manifest, f, indent=2)
 
 
 def build_commit(env, store, info):
     builddir = env.builddir
     manifest = prepare_commit_manifest()
-    write_manifest(manifest, "commit", builddir)
+    write_manifest(manifest, "commit", env)
 
     print(f"{BOLD}Building the ostree commit:{RESET}")
 
@@ -302,7 +312,7 @@ def build_image(env, store, info):
     sources = prepare_sources(store, output_id, commit_id, gpg)
     manifest["sources"] = sources
 
-    write_manifest(manifest, "image", builddir)
+    write_manifest(manifest, "image", env)
 
     _, pipeline = build_manifest(manifest, store, env)
 
