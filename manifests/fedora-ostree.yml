@@ -4,10 +4,6 @@ packages:
   - "@Fedora Cloud Server"
   - chrony
   - efibootmgr
-  - grub2-efi-ia32
-  - grub2-efi-x64
-  - grub2-pc
-  - grub2-tools
   - kernel
   - langpacks-en
   - nss-altfiles
@@ -15,11 +11,16 @@ packages:
   - qemu-guest-agent
   - rpm-ostree
   - selinux-policy-targeted
-  - shim-ia32
-  - shim-x64
   - spice-vdagent
   - xen-libs
   - fedora-repos-ostree
+packages-x86_64:
+  - grub2-efi-ia32
+  - grub2-efi-x64
+  - grub2-pc
+  - grub2-tools
+  - shim-ia32
+  - shim-x64
 packages-exclude:
   - dracut-config-rescue
   - Package

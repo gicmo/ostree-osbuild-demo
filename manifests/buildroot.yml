@@ -11,6 +11,7 @@ packages:
   - xfsprogs
   - tree
   # for the grub stage
+packages-x86_64:
   - grub2-pc-modules
   - grub2-tools       # for the unicode font
   - grub2-efi-x64
