@@ -59,6 +59,10 @@ class BuildEnv:
         with self.open("info.json", mode='w') as f:
             json.dump(self.info, f)
 
+    def write_manifest(self, manifest, name):
+        with self.open(f"{name}-manifest.json", mode="w+") as f:
+            json.dump(manifest, f, indent=2)
+
     @contextlib.contextmanager
     def open(self, *path, mode='r'):
         full_path = os.path.join(self.builddir, *path)
@@ -293,15 +297,10 @@ def prepare_image_pipeline(commit_id):
     return manifest
 
 
-def write_manifest(manifest, name, env):
-    with env.open(f"{name}-manifest.json", mode="w+") as f:
-        json.dump(manifest, f, indent=2)
-
-
-def build_commit(env, store):
+def build_commit(env):
     info, store = env.info, env.store
     manifest = prepare_commit_manifest()
-    write_manifest(manifest, "commit", env)
+    env.write_manifest(manifest, "commit")
 
     print(f"{BOLD}Building the ostree commit:{RESET}")
 
@@ -341,7 +340,7 @@ def build_image(env):
     sources = prepare_sources(store, output_id, commit_id, gpg)
     manifest["sources"] = sources
 
-    write_manifest(manifest, "image", env)
+    env.write_manifest(manifest, "image")
 
     _, pipeline = build_manifest(manifest, store, env)
 
