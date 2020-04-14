@@ -185,6 +185,12 @@ def prepare_commit_manifest(config, treespec, solver):
     pkgs = solver.resolve(treespec)
     manifest_update_packages(manifest, pkgs)
 
+    ref = treespec.get("ref")
+    if ref:
+        assembler = manifest["pipeline"]["assembler"]
+        assert assembler["name"] == "org.osbuild.ostree.commit"
+        assembler["options"]["ref"] = ref
+
     units = treespec.get("units")
     if units:
         systemd = find_stage(manifest, "org.osbuild.systemd")
@@ -203,12 +209,22 @@ def prepare_commit_manifest(config, treespec, solver):
     return manifest
 
 
-def prepare_image_manifest(config, arch):
+def prepare_image_manifest(config, treespec, arch):
     section = f"image-{arch}"
 
     templatefile = config.get(section, "template")
     with open(templatefile, "r") as fp:
         manifest = json.load(fp)
+
+    ref = treespec.get("ref")
+    prefix = ""
+    if ref:
+        ostreestage = find_stage(manifest, "org.osbuild.ostree")
+        existing = ostreestage["options"].get("ref", "")
+        if ":" in existing:
+            remote, existing = existing.split(":", 1)
+            prefix = remote + ":"
+        ostreestage["options"]["ref"] = f"{prefix}{ref}"
 
     return manifest
 
@@ -253,7 +269,7 @@ def main():
         commit = prepare_commit_manifest(config, treespec, solver)
         manifest_add_build_pipeline(commit, builder)
 
-        image = prepare_image_manifest(config, arch)
+        image = prepare_image_manifest(config, treespec, arch)
         manifest_add_build_pipeline(image, builder)
 
     dest = config.get(f"commit-{arch}", "manifest")
