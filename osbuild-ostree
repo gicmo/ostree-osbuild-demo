@@ -118,14 +118,21 @@ def boot(env):
 
     ovmfcode = "/usr/share/OVMF/OVMF_CODE.fd"
 
+    portfwd = {
+        2222:22,
+        9091:909
+    }
+
+    fwds = [f"hostfwd=tcp::{h}-:{g}" for h, g in portfwd.items()]
+
     argv = ['qemu-system-x86_64',
             "-m", "2048",
             "-drive",
             f"file={ovmfcode},if=pflash,format=raw,unit=0,readonly=on",
             '-enable-kvm',
             f"-cdrom", f"{builddir}/cloudinit.iso",
-            "-net", "nic,model=virtio",
-            "-net", "user,hostfwd=tcp::2222-:22,hostfwd=tcp::9091-:9090",
+            "-device", "virtio-net-pci,netdev=n0",
+            "-netdev", "user,id=n0,net=10.0.2.0/24," + ",".join(fwds),
             path]
 
     if not env.args.persist:
