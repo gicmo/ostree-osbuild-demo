@@ -609,23 +609,8 @@
             "vendor": "fedora",
             "install": true
           },
-          "legacy": "i386-pc"
-        }
-      },
-      {
-        "name": "org.osbuild.selinux",
-        "options": {
-          "file_contexts": "etc/selinux/targeted/contexts/files/file_contexts",
-          "paths": [
-            "/boot"
-          ],
-          "ostree": {
-            "commit": "",
-            "osname": "fedora",
-            "paths": [
-              "/etc"
-            ]
-          }
+          "legacy": "i386-pc",
+          "write_defaults": false
         }
       }
     ],
