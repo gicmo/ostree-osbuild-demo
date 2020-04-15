@@ -34,6 +34,58 @@ Cleanup the build directory with:
 ./osbuild-ostree cleanup
 ```
 
+## updates
+Testing of updates can be done with the help of
+`osbuild-update`. First of all, the a general
+setup step will prepare a repository that will
+contain the target commits in a format that can
+be served via http. This is done via:
+
+```
+./osbuild-update setup.
+```
+This will also ensure the image manifest has a
+remote manually configured that points to the
+host. This image needs to now be build by running:
+
+```
+./osbuild-ostree build
+```
+
+This will build the image with the starting commit
+that will be updated later. Now changes can be made
+to the package selection or packages be updated.
+After this a new commit needs to be build with these
+changes but also with the starting commit as the
+parent commit. This can be done via:
+
+```
+./osbuild-update prepare
+sudo ./osbuild-ostree build --commit --sign
+```
+
+NB: only the commit is being built, NOT the image,
+because otherwise the image would be up-to-date,
+and could not be updated.
+
+After the new commit is built, it needs to be
+imported into the update repository with:
+
+``` bash
+./osbuild-update finish
+```
+
+Now the contents of the update repository can be
+served via:
+
+``` bash
+./osbuild-update serve
+```
+
+What is left is to boot the image `sudo ./osbuild-ostree boot`,
+log in (default: `root` with password `r`) and execute the
+update: `rpm-ostree update`. Reboot, et voilà, an updated image.
+
 ## Example output:
 With the actual output of osbuild itself stripped,
 this should give you something along the lines of:
