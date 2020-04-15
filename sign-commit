@@ -190,7 +190,7 @@ def main():
               file=sys.stderr)
 
     key = GPGCommand(gpg_home).get_key(key_id)
-    json.dump({"gpgkey": key}, sys.stdout)
+    json.dump({"gpgkeys": [key]}, sys.stdout)
     return 0
 
 
