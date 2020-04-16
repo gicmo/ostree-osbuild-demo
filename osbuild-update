@@ -16,7 +16,8 @@ gi.require_version('OSTree', '1.0')
 gi.require_version('RpmOstree', '1.0')
 gi.require_version('Json', '1.0')
 
-from gi.repository import Gio, OSTree, RpmOstree, Json
+#pylint: disable=wrong-import-position
+from gi.repository import Gio, OSTree, RpmOstree
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -25,10 +26,6 @@ RED = "\033[31m"
 
 class HttpHandler(http.server.SimpleHTTPRequestHandler):
     parent = http.server.SimpleHTTPRequestHandler
-    def do_HEAD(self):
-        super().do_HEAD()
-
-
     def do_GET(self):
         if self.path == "/":
             self.index()
@@ -66,9 +63,41 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         content = '<html><head><meta charset="UTF-8"></head><body>'
         content += f'commit: {commit_id} <br>'
 
+        rem, add, old, new = None, None, None, None
         if parent:
             content += f'parent: <a href="/osbuild/commit/{parent}">'
             content += f'{parent}</a> <br>'
+            _, rem, add, old, new = RpmOstree.db_diff(repo,
+                                                      parent,
+                                                      commit_id,
+                                                      None)
+
+        content += "<br>"
+
+        if rem:
+            content += 'Removed:'
+            content += '<ul>'
+            for p in rem:
+                content += '<li>'+ p.get_nevra() + '</li>'
+            content += '</ul>'
+
+        if add:
+            content += 'Added:'
+            content += '<ul>'
+            for p in add:
+                content += '<li>'+ p.get_nevra() + '</li>'
+            content += '</ul>'
+
+        if old:
+            content += 'Modified:'
+            content += '<ul>'
+            for o, n in zip(old, new):
+                content += '<li>'
+                content += o.get_name() + " "
+                content += o.get_evr() + " → "
+                content += n.get_evr()
+                content += '</li>'
+            content += '</ul>'
 
         qr = RpmOstree.db_query_all(repo, commit_id, None)
         content += 'Packages:'
@@ -91,7 +120,7 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         repo = OSTree.Repo.new(Gio.File.new_for_path(repopath))
         repo.open(None)
         _, refs = repo.list_refs()
-        ref, commit_id = [(r, c) for r, c in refs.items()][0]
+        commit_id = next(iter(refs))
 
         content = '<html><head><meta charset="UTF-8"></head><body>'
         content += f'commit: <a href="/osbuild/commit/{commit_id}">'
