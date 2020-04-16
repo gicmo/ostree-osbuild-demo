@@ -156,6 +156,7 @@ def serve(args):
                       directory=repodir)
 
     port = args.port
+    socketserver.TCPServer.allow_reuse_address = True
     with socketserver.TCPServer(("", port), Handler) as httpd:
         print(f"serving repo at {port}")
         httpd.serve_forever()
