@@ -17,6 +17,31 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
+class HttpHandler(http.server.SimpleHTTPRequestHandler):
+    parent = http.server.SimpleHTTPRequestHandler
+    def do_HEAD(self):
+        super().do_HEAD()
+
+
+    def do_GET(self):
+        if self.path == "/info/info.json":
+            self.info_json()
+        else:
+            super().do_GET()
+
+    def info_json(self):
+        builddir = os.path.abspath("build")
+        with open(f"{builddir}/info.json", "r") as f:
+            info = json.load(f)
+
+        content = json.dumps(info, indent=2)
+        self.send_response(200)
+        self.send_header("Content-type", "application/json")
+        self.send_header("Content-length", len(content))
+        self.end_headers()
+        self.wfile.write(content.encode('utf-8'))
+
+
 def ostree(*args, _input=None, _stdout=sys.stderr, **kwargs):
     args = list(args) + [f'--{k}={v}' for k, v in kwargs.items()]
     subprocess.run(["ostree"] + args,
@@ -152,8 +177,7 @@ def serve(args):
     builddir = os.path.abspath("build")
     repodir = os.path.join(builddir, "repo")
 
-    Handler = partial(http.server.SimpleHTTPRequestHandler,
-                      directory=repodir)
+    Handler = partial(HttpHandler, directory=repodir)
 
     port = args.port
     socketserver.TCPServer.allow_reuse_address = True
