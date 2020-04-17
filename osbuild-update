@@ -120,7 +120,8 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         repo = OSTree.Repo.new(Gio.File.new_for_path(repopath))
         repo.open(None)
         _, refs = repo.list_refs()
-        commit_id = next(iter(refs))
+        ref = next(iter(refs))
+        commit_id = refs[ref]
 
         content = '<html><head><meta charset="UTF-8"></head><body>'
         content += f'commit: <a href="/osbuild/commit/{commit_id}">'
