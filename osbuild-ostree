@@ -446,17 +446,20 @@ def build_commit(env: BuildEnv):
     with open(f"{build.path}/compose.json") as fp:
         commit_meta = json.load(fp)
         commit_id = commit_meta["ostree-commit"]
+        ref = commit_meta["ref"]
 
     output_id = pipeline.output_id
 
     print_pipeline_done("ostree commit", {
+        "ref": ref,
         "output id": output_id,
         "commit id": commit_id
     })
 
     build.info["ostree"].update({
         "output_id": output_id,
-        "commit_id": commit_id
+        "commit_id": commit_id,
+        "ref": ref,
     })
 
     build.finish()
