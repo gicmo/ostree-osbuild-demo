@@ -2,145 +2,16 @@
 
 import argparse
 import configparser
-import http.server
 import json
 import os
 import subprocess
-import socketserver
 import sys
 import tempfile
-from functools import partial
 
-import gi
-gi.require_version('OSTree', '1.0')
-gi.require_version('RpmOstree', '1.0')
-gi.require_version('Json', '1.0')
-
-#pylint: disable=wrong-import-position
-from gi.repository import Gio, OSTree, RpmOstree
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
 RED = "\033[31m"
-
-
-class HttpHandler(http.server.SimpleHTTPRequestHandler):
-    parent = http.server.SimpleHTTPRequestHandler
-    def do_GET(self):
-        if self.path == "/":
-            self.index()
-        elif self.path == "/osbuild/info.json":
-            self.info_json()
-        elif self.path.startswith("/osbuild/commit/"):
-            self.commit()
-        else:
-            super().do_GET()
-
-    def info_json(self):
-        builddir = os.path.abspath("build")
-        with open(f"{builddir}/info.json", "r") as f:
-            info = json.load(f)
-
-        content = json.dumps(info, indent=2)
-        self.send_response(200)
-        self.send_header("Content-type", "application/json")
-        self.send_header("Content-length", len(content))
-        self.end_headers()
-        self.wfile.write(content.encode('utf-8'))
-
-    def commit(self):
-        builddir = os.path.abspath("build")
-        repopath = f"{builddir}/repo"
-
-        commit_id = os.path.basename(self.path)
-
-        repo = OSTree.Repo.new(Gio.File.new_for_path(repopath))
-        repo.open(None)
-
-        _, commit, _ = repo.load_commit(commit_id)
-        parent = OSTree.commit_get_parent(commit)
-
-        content = '<html><head><meta charset="UTF-8"></head><body>'
-        content += f'commit: {commit_id} <br>'
-
-        rem, add, old, new = None, None, None, None
-        if parent:
-            content += f'parent: <a href="/osbuild/commit/{parent}">'
-            content += f'{parent}</a> <br>'
-            _, rem, add, old, new = RpmOstree.db_diff(repo,
-                                                      parent,
-                                                      commit_id,
-                                                      None)
-
-        content += "<br>"
-
-        if rem:
-            content += 'Removed:'
-            content += '<ul>'
-            for p in rem:
-                content += '<li>'+ p.get_nevra() + '</li>'
-            content += '</ul>'
-
-        if add:
-            content += 'Added:'
-            content += '<ul>'
-            for p in add:
-                content += '<li>'+ p.get_nevra() + '</li>'
-            content += '</ul>'
-
-        if old:
-            content += 'Modified:'
-            content += '<ul>'
-            for o, n in zip(old, new):
-                content += '<li>'
-                content += o.get_name() + " "
-                content += o.get_evr() + " → "
-                content += n.get_evr()
-                content += '</li>'
-            content += '</ul>'
-
-        qr = RpmOstree.db_query_all(repo, commit_id, None)
-        content += 'Packages:'
-        content += '<ul>'
-        for p in qr:
-            content += f'<li>{p.get_nevra()}</li>'
-        content += '</ul>'
-
-        content += '</body><html>'
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.send_header("Content-length", len(content))
-        self.end_headers()
-        self.wfile.write(content.encode('utf-8'))
-
-    def index(self):
-        builddir = os.path.abspath("build")
-        repopath = f"{builddir}/repo"
-
-        repo = OSTree.Repo.new(Gio.File.new_for_path(repopath))
-        repo.open(None)
-        _, refs = repo.list_refs()
-        ref = next(iter(refs))
-        commit_id = refs[ref]
-
-        content = '<html><head><meta charset="UTF-8"></head><body>'
-        content += f'commit: <a href="/osbuild/commit/{commit_id}">'
-        content += f'{commit_id}</a> <br>'
-
-        _, commit, _ = repo.load_commit(commit_id)
-        parent_id = OSTree.commit_get_parent(commit)
-
-        if parent_id:
-            content += f'parent: <a href="/osbuild/commit/{parent_id}">'
-            content += f'{parent_id}</a> <br>'
-
-        content += '</body><html>'
-        self.send_response(200)
-        self.send_header("Content-type", "text/html")
-        self.send_header("Content-length", len(content))
-        self.end_headers()
-        self.wfile.write(content.encode('utf-8'))
-
 
 
 def ostree(*args, _input=None, _stdout=sys.stderr, **kwargs):
@@ -274,21 +145,10 @@ def finish(_args):
     return 0
 
 
-def serve(args):
-    builddir = os.path.abspath("build")
-    repodir = os.path.join(builddir, "repo")
-
-    Handler = partial(HttpHandler, directory=repodir)
-
-    port = args.port
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", port), Handler) as httpd:
-        try:
-            print(f"serving repo at http://localhost:{port}")
-            httpd.serve_forever()
-        except KeyboardInterrupt:
-            print(" Bye!")
-            httpd.shutdown()
+def serve(_args):
+    print("No longer supported")
+    print("Use {BOLD}./osbuild-serve{RESET} instead")
+    return -1
 
 
 def main():
