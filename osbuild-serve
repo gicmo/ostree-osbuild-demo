@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 
 import argparse
+import gc
 import http.server
 import json
 import os
@@ -23,6 +24,16 @@ RED = "\033[31m"
 
 
 class HttpHandler(http.server.SimpleHTTPRequestHandler):
+    default_request_version = 'HTTP/1.1'
+
+    def log_request(self, code=None, size=None):
+        if code == 404:
+            print(f"{self.path} not found")
+
+    def finish(self):
+        super.finish()
+        gc.collect()
+
     parent = http.server.SimpleHTTPRequestHandler
     def do_GET(self):
         if self.path == "/":
@@ -140,6 +151,11 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         self.wfile.write(content.encode('utf-8'))
 
 
+class HttpServer(http.server.ThreadingHTTPServer):
+    def server_activate(self):
+        self.socket.listen(128)
+
+
 def main():
     parser = argparse.ArgumentParser(description="osbuild ostree server")
     parser.add_argument('--port', default=8000, type=int)
@@ -151,10 +167,9 @@ def main():
     Handler = partial(HttpHandler, directory=repodir)
 
     port = args.port
-    socketserver.TCPServer.allow_reuse_address = True
-    with socketserver.TCPServer(("", port), Handler) as httpd:
+    with HttpServer(("", port), Handler) as httpd:
         try:
-            print(f"serving repo at http://localhost:{port}")
+            print(f"Serving at {BOLD}http://localhost:{port}{RESET}")
             httpd.serve_forever()
         except KeyboardInterrupt:
             print(" Bye!")
