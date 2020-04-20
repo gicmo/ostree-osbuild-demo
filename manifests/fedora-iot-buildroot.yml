@@ -1,0 +1,17 @@
+repos:
+  - rawhide
+packages:
+  - rpm
+  - dosfstools
+  - e2fsprogs
+  - policycoreutils
+  - qemu-img
+  - rpm-ostree
+  - systemd
+  - xfsprogs
+  # for the grub stage
+packages-x86_64:
+  - grub2-pc-modules
+  - grub2-tools       # for the unicode font
+  - grub2-efi-x64
+  - shim-x64
