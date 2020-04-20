@@ -128,9 +128,9 @@ def manifest_update_packages(manifest, pkgs):
     rpmstage["options"]["packages"] = checksums
 
 
-def manifest_add_build_pipeline(manifest, builder):
+def manifest_add_build_pipeline(manifest, builder, relver):
     pipeline = builder["pipeline"]
-    runner = builder["runner"]
+    runner = f"org.osbuild.fedora{relver}"
     urls = builder["sources"]["org.osbuild.files"]["urls"]
 
     manifest["pipeline"]["build"]["pipeline"] = pipeline
@@ -167,7 +167,6 @@ def prepare_build_manifest(config, solver):
     pkgs = solver.resolve(treespec)
     manifest_update_packages(manifest, pkgs)
 
-    manifest["runner"] = treespec["runner"]
     return manifest
 
 
@@ -252,6 +251,8 @@ def main():
     relver = config.get("DEFAULT", "release")
     tree_file = config.get("DEFAULT", "tree_file")
 
+    print(f"  - {BOLD}{tree_file}{RESET} rel: {relver}, arch: {arch}")
+
     with open(tree_file, "r") as f:
         treespec = yaml.unsafe_load(f)
 
@@ -267,10 +268,10 @@ def main():
         builder = prepare_build_manifest(config, solver)
 
         commit = prepare_commit_manifest(config, treespec, solver)
-        manifest_add_build_pipeline(commit, builder)
+        manifest_add_build_pipeline(commit, builder, relver)
 
         image = prepare_image_manifest(config, treespec, arch)
-        manifest_add_build_pipeline(image, builder)
+        manifest_add_build_pipeline(image, builder, relver)
 
     dest = config.get(f"commit-{arch}", "manifest")
     with open(dest, "w") as f:
