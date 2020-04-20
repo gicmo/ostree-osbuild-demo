@@ -16,5 +16,3 @@ packages-x86_64:
   - grub2-tools       # for the unicode font
   - grub2-efi-x64
   - shim-x64
-
-runner: org.osbuild.fedora31
