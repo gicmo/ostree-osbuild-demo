@@ -180,6 +180,7 @@ def prepare_commit_manifest(config, treespec, solver):
     with open(templatefile, "r") as fp:
         manifest = json.load(fp)
 
+    manifest["sources"]["org.osbuild.files"]["urls"] = {}
     print("  Generating package list and sources")
     pkgs = solver.resolve(treespec)
     manifest_update_packages(manifest, pkgs)
@@ -214,6 +215,9 @@ def prepare_image_manifest(config, treespec, arch):
     templatefile = config.get(section, "template")
     with open(templatefile, "r") as fp:
         manifest = json.load(fp)
+
+    if "org.osbuild.files" in manifest["sources"]:
+        manifest["sources"]["org.osbuild.files"]["urls"] = {}
 
     ref = treespec.get("ref")
     prefix = ""
