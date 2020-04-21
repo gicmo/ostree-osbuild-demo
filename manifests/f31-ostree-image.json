@@ -596,7 +596,7 @@
             }
           ],
           "rootfs": {
-            "uuid": "76a22bf4-f153-4541-b6c7-0332c0dfaeac"
+            "label": "root"
           },
           "kernel_opts": [
             "console=tty0",
@@ -609,8 +609,12 @@
       {
         "name": "org.osbuild.grub2",
         "options": {
-          "root_fs_uuid": "76a22bf4-f153-4541-b6c7-0332c0dfaeac",
-          "boot_fs_uuid": "7acfe2cc-4134-482a-a9d4-4979a5a87569",
+          "rootfs": {
+            "label": "root"
+          },
+          "bootfs": {
+            "label": "boot"
+          },
           "uefi": {
             "vendor": "fedora",
             "install": true
@@ -633,20 +637,22 @@
         "partitions": [
           {
             "size": 786432,
+            "name": "boot",
             "filesystem": {
               "type": "ext4",
-              "uuid": "7acfe2cc-4134-482a-a9d4-4979a5a87569",
               "label": "boot",
+              "uuid": "7acfe2cc-4134-482a-a9d4-4979a5a87569",
               "mountpoint": "/boot"
             }
           },
           {
             "size": 972800,
             "type": "C12A7328-F81F-11D2-BA4B-00A0C93EC93B",
+            "name": "EFI-SYSTEM",
             "filesystem": {
               "type": "vfat",
               "uuid": "46BB-8120",
-              "label": "EFI System Partition",
+              "label": "EFI-SYSTEM",
               "mountpoint": "/boot/efi"
             }
           },
@@ -657,10 +663,11 @@
           },
           {
             "type": "0FC63DAF-8483-4772-8E79-3D69D8477DE4",
+            "name": "root",
             "filesystem": {
               "type": "xfs",
-              "uuid": "76a22bf4-f153-4541-b6c7-0332c0dfaeac",
               "mountpoint": "/",
+              "uuid": "76a22bf4-f153-4541-b6c7-0332c0dfaeac",
               "label": "root"
             }
           }
