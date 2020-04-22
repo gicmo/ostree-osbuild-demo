@@ -371,7 +371,7 @@ def build_image(env):
     image_relpath = os.path.relpath(image_abspath, os.path.curdir)
     print("")
     print("Image ready at:")
-    print(f"  {image_relpath}")
+    print(f"  {image_relpath}/{image_name}")
 
     info["image"] = {
         "output_id": output_id,
