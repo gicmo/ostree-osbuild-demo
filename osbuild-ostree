@@ -7,7 +7,6 @@ import json
 import os
 import platform
 import subprocess
-import shutil
 import sys
 
 # Hack to ensure with have the osbuild package available
@@ -155,34 +154,6 @@ def boot(env):
 
 class BuildError(Exception):
     pass
-
-def remove_path(path):
-    def fixperms(p):
-        subprocess.run(["chattr", "-i", p],
-                       check=False)
-        os.chmod(p, 0o700)
-
-    def unlink(p):
-        try:
-            os.unlink(p)
-        except IsADirectoryError:
-            remove_path(p)
-        except FileNotFoundError:
-            pass
-
-    def on_error(_fn, p, exc_info):
-        e = exc_info[0]
-        if issubclass(e, FileNotFoundError):
-            pass
-        elif issubclass(e, PermissionError):
-            if p != path:
-                fixperms(os.path.dirname(p))
-            fixperms(p)
-            unlink(p)
-        else:
-            raise e
-
-    shutil.rmtree(path, onerror=on_error)
 
 
 def store_status(store, object_id):
@@ -446,7 +417,8 @@ def clean(env):
         return 1
 
     for path in paths:
-        remove_path(path)
+        #pylint: disable=no-member
+        osbuild.util.rmrf.rmtree(path)
 
     return 0
 
