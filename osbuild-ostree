@@ -17,6 +17,7 @@ import osbuild  #pylint: disable=wrong-import-position
 
 
 RESET = "\033[0m"
+GREEN = "\033[32m"
 BOLD = "\033[1m"
 RED = "\033[31m"
 
@@ -219,6 +220,16 @@ def print_pipeline(pipeline, store, level=0):
         print(f"{indent}  {asm.name}: \t{asm.id}{status}")
 
 
+def print_pipeline_done(name, items):
+    print("")
+    print(f"Pipeline for {BOLD}{name}{RESET} is", end=" ")
+    print(f"{GREEN}done{RESET}")
+
+    maxlen = max(len(k) for k in items) + 2
+    for k in items:
+        print(f"{k:>{maxlen}}: {items[k]}")
+
+
 def find_osbuild_module():
     this_file = os.path.dirname(os.path.abspath(__file__))
     return os.path.join(this_file, "osbuild")
@@ -330,10 +341,10 @@ def build_commit(env):
         commit_meta = json.load(fp)
         commit_id = commit_meta["ostree-commit"]
 
-    print("")
-    print("Pipeline for ostree commit is done:")
-    print("  output id:", output_id)
-    print("  commit id:", commit_id)
+    print_pipeline_done("ostree commit", {
+        "output id": output_id,
+        "commit id": commit_id
+    })
 
     info["ostree"].update({
         "output_id": output_id,
@@ -362,10 +373,10 @@ def build_image(env):
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
 
-    print("")
-    print("Pipeline for ostree image is done:")
-    print("  output id:", output_id)
-    print("      image:", image_name)
+    print_pipeline_done("image", {
+        "output id": output_id,
+        "image": image_name
+    })
 
     image_abspath = store.resolve_ref(output_id)
     image_relpath = os.path.relpath(image_abspath, os.path.curdir)
