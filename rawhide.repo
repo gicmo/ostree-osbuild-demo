@@ -1,0 +1,11 @@
+[rawhide]
+name=Fedora $releasever - $basearch
+failovermethod=priority
+metalink=https://mirrors.fedoraproject.org/metalink?repo=fedora-$releasever&arch=$basearch
+enabled=1
+metadata_expire=7d
+repo_gpgcheck=0
+type=rpm
+gpgcheck=1
+gpgkey=https://src.fedoraproject.org/rpms/fedora-repos/raw/master/f/RPM-GPG-KEY-fedora-33-primary
+skip_if_unavailable=False
