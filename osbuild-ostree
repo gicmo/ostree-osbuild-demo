@@ -406,15 +406,37 @@ def build(env):
 
 
 def clean(env):
-    path = env.builddir
-    print(f"About to clean up {path}.")
+    targets = env.args.target or ['all']
+    builddir = env.builddir
+    paths = []
+    for t in targets:
+        if t == "all":
+            paths = [builddir]
+            break
+
+        if t == "dnf":
+            paths += [f"{builddir}/dnf-cache"]
+        elif t == "store":
+            paths += [f"{builddir}/store"]
+        elif t == "objects":
+            paths += [f"{builddir}/store/tmp"]
+            paths += [f"{builddir}/store/refs"]
+            paths += [f"{builddir}/store/objects"]
+        else:
+            ValueError("unknown clean target")
+
+    print(f"About to clean up:")
+    print("  -", "\n  - ".join(paths))
     try:
         s = input("Type 'Y' to confirm: ")
     except (EOFError, KeyboardInterrupt):
         return 1
     if s != 'Y':
         return 1
-    remove_path(path)
+
+    for path in paths:
+        remove_path(path)
+
     return 0
 
 
@@ -439,6 +461,14 @@ def main():
     subpar.set_defaults(cmd='build')
 
     subpar = sp.add_parser("clean", help='cleanup the build dir')
+    subpar.add_argument("--all", dest='target', action='append_const', const="all",
+                        help='remove everything in the build dir')
+    subpar.add_argument("--dnf", dest='target', action='append_const', const="dnf",
+                        help='remove the dnf cache')
+    subpar.add_argument("--store", dest='target', action='append_const', const="store",
+                        help='remove the osbuild store')
+    subpar.add_argument("--objects", dest='target', action='append_const', const="objects",
+                        help='remove the osbuild store objects')
     subpar.set_defaults(cmd='clean')
 
     subpar = sp.add_parser("boot", help='boot the final image')
