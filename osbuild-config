@@ -233,6 +233,11 @@ def prepare_image_manifest(config, treespec, arch, solver):
             prefix = remote + ":"
         ostreestage["options"]["ref"] = f"{prefix}{ref}"
 
+    ignition_network = treespec.get("ignition-network-kcmdline")
+    if ignition_network:
+        ignition = find_stage(manifest, "org.osbuild.ignition")
+        ignition["options"]["network"] = ignition_network
+
     return manifest
 
 

@@ -1,0 +1,36 @@
+ref: fedora/x86_64/osbuild-demo
+repos:
+  - fedora
+packages:
+  - "@Fedora Cloud Server"
+  - chrony
+  - efibootmgr
+  - kernel
+  - langpacks-en
+  - nss-altfiles
+  - ostree
+  - qemu-guest-agent
+  - rpm-ostree
+  - selinux-policy-targeted
+  - spice-vdagent
+  - xen-libs
+  - fedora-repos-ostree
+  - polkit
+  - ignition
+packages-x86_64:
+  - grub2-efi-ia32
+  - grub2-efi-x64
+  - grub2-pc
+  - grub2-tools
+  - shim-ia32
+  - shim-x64
+packages-exclude:
+  - dracut-config-rescue
+  - PackageKit
+units:
+  - ignition-firstboot-complete.service  # ignition-ostree module
+etc-group-members:
+  - wheel
+ignition-network-kcmdline:
+  - 'rd.neednet=1'
+  - 'ip=dhcp,dhcp6'

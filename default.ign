@@ -1,0 +1,15 @@
+{
+  "ignition": { "version": "3.0.0" },
+  "passwd": {
+    "users": [
+      {
+        "name": "gicmo",
+        "passwordHash": "$6$hgw2ZEP5rtU0CSnX$uIuS/wO5BUDVUTMUaiJh5mge4NyfT.ZexbZmL56AHBkYBP3iZlOEz5PUdnB2M0W8Wa.f2pl4oZamwPTVbF7ND.",
+        "sshAuthorizedKeys": [
+          "ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAIEApQ0yn8aUPRXoJgGZpWXcOjMXjJgmq9KN/tg0iyK9nuR3uRfdiNGTpgKr7DY9HfdP07R09e/uZ8qnLcXUrXYfJj087JNTMHjT1Ifb0KUB9Mzy82RDUFuefds356arhzhW6YS4cOOgY2GmEt2KhftjdHRic/eElZW9I5mA3Oz/uDk="
+        ],
+        "groups": ["wheel"]
+      }
+    ]
+  }
+}
