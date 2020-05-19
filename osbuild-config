@@ -209,7 +209,7 @@ def prepare_commit_manifest(config, treespec, solver):
     return manifest
 
 
-def prepare_image_manifest(config, treespec, arch):
+def prepare_image_manifest(config, treespec, arch, solver):
     section = f"image-{arch}"
 
     templatefile = config.get(section, "template")
@@ -218,6 +218,10 @@ def prepare_image_manifest(config, treespec, arch):
 
     if "org.osbuild.files" in manifest["sources"]:
         manifest["sources"]["org.osbuild.files"]["urls"] = {}
+
+    if find_stage(manifest, "org.osbuild.rpm"):
+        pkgs = solver.resolve(treespec)
+        manifest_update_packages(manifest, pkgs)
 
     ref = treespec.get("ref")
     prefix = ""
@@ -271,19 +275,21 @@ def main():
 
         builder = prepare_build_manifest(config, solver)
 
-        commit = prepare_commit_manifest(config, treespec, solver)
-        manifest_add_build_pipeline(commit, builder, relver)
+        if f"commit-{arch}" in config:
+            commit = prepare_commit_manifest(config, treespec, solver)
+            manifest_add_build_pipeline(commit, builder, relver)
 
-        image = prepare_image_manifest(config, treespec, arch)
-        manifest_add_build_pipeline(image, builder, relver)
+            dest = config.get(f"commit-{arch}", "manifest")
+            with open(dest, "w") as f:
+                json.dump(commit, f, indent=2)
 
-    dest = config.get(f"commit-{arch}", "manifest")
-    with open(dest, "w") as f:
-        json.dump(commit, f, indent=2)
+        if f"image-{arch}" in config:
+            image = prepare_image_manifest(config, treespec, arch, solver)
+            manifest_add_build_pipeline(image, builder, relver)
 
-    dest = config.get(f"image-{arch}", "manifest")
-    with open(dest, "w") as f:
-        json.dump(image, f, indent=2)
+            dest = config.get(f"image-{arch}", "manifest")
+            with open(dest, "w") as f:
+                json.dump(image, f, indent=2)
 
 
 if __name__ == "__main__":
