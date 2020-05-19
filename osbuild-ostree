@@ -225,9 +225,7 @@ def load_pipeline(manifest):
     return pipeline
 
 
-def build_manifest(manifest, store, _env):
-    pipeline = load_pipeline(manifest)
-
+def build_pipeline(pipeline, store):
     print("Building the following pipeline:")
     print_pipeline(pipeline, store)
 
@@ -249,7 +247,7 @@ def build_manifest(manifest, store, _env):
     if not r["success"]:
         raise BuildError
 
-    return r, pipeline
+    return r
 
 
 def sign_commit(env):
@@ -320,10 +318,11 @@ def build_commit(env):
 
     print(f"{BOLD}Building the ostree commit:{RESET}")
 
-    _, pipeline = build_manifest(manifest, store, env)
+    pipeline = load_pipeline(manifest)
+
+    build_pipeline(pipeline, store)
 
     output_id = pipeline.output_id
-
     obj = store.resolve_ref(output_id)
     with open(f"{obj}/compose.json") as fp:
         commit_meta = json.load(fp)
@@ -356,7 +355,9 @@ def build_image(env):
 
     env.write_manifest(manifest, "image")
 
-    _, pipeline = build_manifest(manifest, store, env)
+    pipeline = load_pipeline(manifest)
+
+    build_pipeline(pipeline, store)
 
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
