@@ -44,6 +44,18 @@ class BuildEnv:
         cpu = platform.processor()
         return self.config.get("DEFAULT", "arch", fallback=cpu)
 
+    @property
+    def targets(self):
+        targets = []
+
+        if f"commit-{self.arch}" in self.config:
+            targets += ["commit", "sign"]
+
+        if f"image-{self.arch}" in self.config:
+            targets += ["image"]
+
+        return targets
+
     def load_manifest(self, name):
         section = f"{name}-{self.arch}"
         path = self.config.get(section, "manifest")
@@ -364,7 +376,7 @@ def build_image(env):
 
 
 def build(env):
-    target = env.args.target or ['commit', 'sign', 'image']
+    target = env.args.target or env.targets
 
     try:
         if 'commit' in target:
