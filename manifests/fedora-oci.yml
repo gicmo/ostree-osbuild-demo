@@ -1,0 +1,10 @@
+repos:
+  - fedora
+packages:
+  - "@Core"
+  - langpacks-en
+  - selinux-policy-targeted
+  - nginx
+packages-exclude:
+  - dracut-config-rescue
+  - PackageKit

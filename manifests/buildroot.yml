@@ -10,6 +10,7 @@ packages:
   - systemd
   - xfsprogs
   - tree
+  - tar
   # for the grub stage
 packages-x86_64:
   - grub2-pc-modules
