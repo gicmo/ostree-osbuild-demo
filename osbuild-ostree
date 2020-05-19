@@ -218,10 +218,15 @@ def find_osbuild_module():
     return os.path.join(this_file, "osbuild")
 
 
-def build_manifest(manifest, store, _env):
+def load_pipeline(manifest):
     sources = manifest.get("sources", {})
     pipeline = manifest["pipeline"]
     pipeline = osbuild.load(pipeline, sources)
+    return pipeline
+
+
+def build_manifest(manifest, store, _env):
+    pipeline = load_pipeline(manifest)
 
     print("Building the following pipeline:")
     print_pipeline(pipeline, store)
