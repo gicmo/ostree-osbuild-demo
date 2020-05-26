@@ -465,9 +465,6 @@
               "mode": 448
             }
           ],
-          "rootfs": {
-            "label": "root"
-          },
           "kernel_opts": [
             "rw",
             "console=tty0",

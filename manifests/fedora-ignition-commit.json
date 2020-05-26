@@ -1077,6 +1077,10 @@
             {
               "from": "/overlay.d/05core/usr/lib/dracut/modules.d/40ignition-ostree/",
               "to": "/usr/lib/dracut/modules.d/40ignition-ostree/"
+            },
+            {
+              "from": "/overlay.d/05core/usr/lib/systemd/system-generators/coreos-boot-mount-generator",
+              "to": "/usr/lib/systemd/system-generators/coreos-boot-mount-generator"
             }
           ]
         }
@@ -1093,35 +1097,6 @@
         "name": "org.osbuild.locale",
         "options": {
           "language": "en_US"
-        }
-      },
-      {
-        "name": "org.osbuild.fstab",
-        "options": {
-          "filesystems": [
-            {
-              "label": "boot",
-              "vfs_type": "ext4",
-              "path": "/boot",
-              "freq": 1,
-              "passno": 1
-            },
-            {
-              "label": "root",
-              "vfs_type": "ext4",
-              "path": "/",
-              "freq": 1,
-              "passno": 1
-            },
-            {
-              "label": "EFI-SYSTEM",
-              "vfs_type": "vfat",
-              "path": "/boot/efi",
-              "options": "umask=0077,shortname=winnt",
-              "freq": 0,
-              "passno": 2
-            }
-          ]
         }
       },
       {
