@@ -1,6 +1,7 @@
 ref: fedora/x86_64/osbuild-demo
 repos:
-  - rawhide
+  - fedora
+  - fedora-updates
 packages:
   - fedora-release-iot
   - glibc
