@@ -180,7 +180,19 @@ def prepare_commit_manifest(config, treespec, solver):
     with open(templatefile, "r") as fp:
         manifest = json.load(fp)
 
-    manifest["sources"]["org.osbuild.files"]["urls"] = {}
+    old = manifest["sources"]["org.osbuild.files"]["urls"]
+    new = {}
+    for stage in manifest["pipeline"]["stages"]:
+        if stage["name"] != "org.osbuild.copy":
+            continue
+        options = stage.get("options", {})
+        source = options.get("source", {})
+        if source.get("type", "") != "archive":
+            continue
+        checksum = source["checksum"]
+        new[checksum] = old[checksum]
+
+    manifest["sources"]["org.osbuild.files"]["urls"] = new
     print("  Generating package list and sources")
     pkgs = solver.resolve(treespec)
     manifest_update_packages(manifest, pkgs)
