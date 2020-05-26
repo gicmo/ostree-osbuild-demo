@@ -21,6 +21,55 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
+class Build:
+    def __init__(self, env, target, manifest):
+        self.env = env
+        self.target = target
+        self.manifest = manifest
+        self.path = env.builddir
+        self.pipeline = None
+
+        self.info = self.read_info()
+
+    def read_info(self):
+        try:
+            with self.open("info.json", mode='r') as f:
+                info = json.load(f)
+        except (FileNotFoundError, json.decoder.JSONDecodeError):
+            info = {}
+            if self.target == "commit":
+                info["ostree"] = {}
+        return info
+
+    def write_info(self):
+        with self.open("info.json", mode='w') as f:
+            json.dump(self.info, f)
+
+    def write_manifest(self):
+        with self.open(f"{self.target}-manifest.json", mode="w+") as f:
+            json.dump(self.manifest, f, indent=2)
+
+    @contextlib.contextmanager
+    def open(self, *path, mode='r'):
+        full_path = os.path.join(self.path, *path)
+        f = open(full_path, mode)
+        try:
+            yield f
+        finally:
+            f.close()
+
+    def begin(self):
+        manifest = self.manifest
+        sources = manifest.get("sources", {})
+        pipeline = manifest["pipeline"]
+        self.pipeline = osbuild.load(pipeline, sources)
+        self.write_manifest()
+        return self.pipeline
+
+    def finish(self):
+        self.write_info()
+
+
 class BuildEnv:
     def __init__(self, args):
         self.args = args
@@ -100,6 +149,17 @@ class BuildEnv:
             yield f
         finally:
             f.close()
+
+    def prepare_build(self, target):
+        manifest = self.load_manifest(target)
+        build = Build(self, target, manifest)
+        return build
+
+    def load_build(self, target):
+        with self.open(f"{target}-manifest.json", mode="r") as f:
+            manifest = json.load(f)
+        build = Build(self, target, manifest)
+        return build
 
 
 def genisoimage(outdir, datdir):
@@ -250,10 +310,13 @@ def build_pipeline(pipeline, store):
     return r
 
 
-def sign_commit(env):
-    builddir, info = env.builddir, env.info
-    output_id = info["ostree"]["output_id"]
-    commit_id = info["ostree"]["commit_id"]
+def sign_commit(env: BuildEnv):
+    build = env.load_build("commit")
+
+    builddir = env.builddir
+
+    output_id = build.info["ostree"]["output_id"]
+    commit_id = build.info["ostree"]["commit_id"]
     repo = f"{builddir}/store/refs/{output_id}/repo"
     data = {
         "builddir": builddir,
@@ -278,8 +341,8 @@ def sign_commit(env):
     print("")
     res = json.loads(r.stdout)
 
-    info["ostree"]["gpg"] = res
-    env.write_info()
+    build.info["ostree"]["gpg"] = res
+    build.write_info()
 
 
 def prepare_sources(manifest, store, output_id, commit_id, gpg):
@@ -311,14 +374,13 @@ def prepare_image_pipeline(manifest, commit_id):
         options["commit"] = commit_id
 
 
-def build_commit(env):
-    info, store = env.info, env.store
-    manifest = env.load_manifest("commit")
-    env.write_manifest(manifest, "commit")
+def build_commit(env: BuildEnv):
+    store = env.store
+    build = env.prepare_build("commit")
 
     print(f"{BOLD}Building the ostree commit:{RESET}")
 
-    pipeline = load_pipeline(manifest)
+    pipeline = build.begin()
 
     build_pipeline(pipeline, store)
 
@@ -333,29 +395,32 @@ def build_commit(env):
         "commit id": commit_id
     })
 
-    info["ostree"].update({
+    build.info["ostree"].update({
         "output_id": output_id,
         "commit_id": commit_id
     })
 
-    env.write_info()
+    build.finish()
 
 
-def build_image(env):
-    info, store = env.info, env.store
-    commit_id = info["ostree"]["commit_id"]
-    output_id = info["ostree"]["output_id"]
-    gpg = info["ostree"]["gpg"]
+def build_image(env: BuildEnv):
+    store = env.store
+
+    commit = env.load_build("commit")
+
+    commit_id = commit.info["ostree"]["commit_id"]
+    output_id = commit.info["ostree"]["output_id"]
+    gpg = commit.info["ostree"]["gpg"]
 
     print(f"{BOLD}Building the image{RESET}")
 
-    manifest = env.load_manifest("image")
+    build = env.prepare_build("image")
+    manifest = build.manifest
+
     prepare_image_pipeline(manifest, commit_id)
     prepare_sources(manifest, store, output_id, commit_id, gpg)
 
-    env.write_manifest(manifest, "image")
-
-    pipeline = load_pipeline(manifest)
+    pipeline = build.begin()
 
     build_pipeline(pipeline, store)
 
@@ -373,12 +438,13 @@ def build_image(env):
     print("Image ready at:")
     print(f"  {image_relpath}/{image_name}")
 
-    info["image"] = {
+    build.info["ostree"] = commit.info["ostree"]
+    build.info["image"] = {
         "output_id": output_id,
         "name": image_name,
     }
 
-    env.write_info()
+    build.finish()
 
 
 def build(env):
