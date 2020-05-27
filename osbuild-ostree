@@ -345,7 +345,10 @@ def sign_commit(env: BuildEnv):
     build.write_info()
 
 
-def prepare_sources(manifest, store, output_id, commit_id, gpg):
+def prepare_sources(manifest, commit):
+    commit_id = commit.info["ostree"]["commit_id"]
+    gpg = commit.info["ostree"]["gpg"]
+
     obj = store.resolve_ref(output_id)
     url = "file://" + os.path.join(obj, "repo")
     sources = manifest["sources"]
@@ -363,7 +366,8 @@ def prepare_sources(manifest, store, output_id, commit_id, gpg):
     }
 
 
-def prepare_image_pipeline(manifest, commit_id):
+def prepare_image_pipeline(manifest, commit):
+    commit_id = commit.info["ostree"]["commit_id"]
     for stage in manifest["pipeline"]["stages"]:
         options = stage.get("options")
         if stage["name"] in ["org.osbuild.selinux"]:
@@ -408,17 +412,13 @@ def build_image(env: BuildEnv):
 
     commit = env.load_build("commit")
 
-    commit_id = commit.info["ostree"]["commit_id"]
-    output_id = commit.info["ostree"]["output_id"]
-    gpg = commit.info["ostree"]["gpg"]
-
     print(f"{BOLD}Building the image{RESET}")
 
     build = env.prepare_build("image")
     manifest = build.manifest
 
-    prepare_image_pipeline(manifest, commit_id)
-    prepare_sources(manifest, store, output_id, commit_id, gpg)
+    prepare_image_pipeline(manifest, commit)
+    prepare_sources(manifest, commit)
 
     pipeline = build.begin()
 
