@@ -46,6 +46,25 @@ def buildenv_from_args(args):
     return builddir, config
 
 
+def find_build(builddir, config):
+    name = config.get("DEFAULT", "name")
+    nick = config.get("DEFAULT", "nick", fallback=name)
+
+    buildsroot = os.path.join(builddir, "builds", nick)
+
+    with os.scandir(os.path.join(buildsroot, "commit")) as entries:
+        entries = list(entries)
+
+    visible = filter(lambda e: not e.name.startswith('.'), entries)
+    dirs = filter(lambda e: e.is_dir(follow_symlinks=False), visible)
+    builds = sorted(dirs, key=lambda e: e.stat().st_mtime)
+
+    if not builds:
+        raise RuntimeError("No build fount")
+
+    return builds[-1].path
+
+
 def setup(args):
     builddir, config = buildenv_from_args(args)
 
@@ -83,17 +102,24 @@ def setup(args):
     with open(dest, "w") as fp:
         json.dump(manifest, fp, indent=2)
 
+    print("")
+    print(f"Wrote manifest at '{BOLD}{dest}{RESET}'")
+    print("")
+    subprocess.run(["git", "diff", "--", dest],
+                   check=False)
+
 
 def prepare(args):
     builddir, config = buildenv_from_args(args)
 
-    with open(f"{builddir}/info.json", "r") as f:
+    build = find_build(builddir, config)
+
+    with open(f"{build}/info.json", "r") as f:
         info = json.load(f)
 
-    output_id = info["ostree"]["output_id"]
     commit_id = info["ostree"]["commit_id"]
 
-    source = f"{builddir}/store/refs/{output_id}/repo"
+    source = f"{build}/repo"
     repo = f"{builddir}/repo"
 
     with tempfile.TemporaryFile(dir=builddir) as r:
@@ -120,18 +146,27 @@ def prepare(args):
     with open(dest, "w") as fp:
         json.dump(manifest, fp, indent=2)
 
+    print("")
+    print(f"Wrote manifest at '{BOLD}{dest}{RESET}'")
+    print("")
+    subprocess.run(["git", "diff", "--", dest],
+                   check=False)
+
+
     return 0
 
 
 def finish(args):
     builddir, config = buildenv_from_args(args)
 
-    with open(f"{builddir}/info.json", "r") as f:
+    build = find_build(builddir, config)
+
+    print(f"Using build: {build}")
+
+    with open(f"{build}/info.json", "r") as f:
         info = json.load(f)
 
-    output_id = info["ostree"]["output_id"]
-
-    source = f"{builddir}/store/refs/{output_id}/repo"
+    source = f"{build}/repo"
     repo = f"{builddir}/repo"
 
     with tempfile.TemporaryFile(dir=builddir) as r:
