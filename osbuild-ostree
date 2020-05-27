@@ -36,7 +36,7 @@ class Build:
             with self.open("info.json", mode='r') as f:
                 info = json.load(f)
         except (FileNotFoundError, json.decoder.JSONDecodeError):
-            info = {}
+            info = {"target": target}
             if self.target == "commit":
                 info["ostree"] = {}
         return info
