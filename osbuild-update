@@ -39,14 +39,18 @@ def find_remote(remotes, name):
     return None, None
 
 
-def setup(_args):
-    builddir = os.path.abspath("build")
+def buildenv_from_args(args):
+    builddir = args.builddir
+    config = configparser.ConfigParser()
+    config.read(args.config)
+    return builddir, config
+
+
+def setup(args):
+    builddir, config = buildenv_from_args(args)
 
     repo = f"{builddir}/repo"
     ostree("init", mode="archive-z2", repo=repo)
-
-    config = configparser.ConfigParser()
-    config.read('config.ini')
 
     arch = config.get("DEFAULT", "arch")
     dest = config.get(f"image-{arch}", "manifest")
@@ -80,8 +84,8 @@ def setup(_args):
         json.dump(manifest, fp, indent=2)
 
 
-def prepare(_args):
-    builddir = os.path.abspath("build")
+def prepare(args):
+    builddir, config = buildenv_from_args(args)
 
     with open(f"{builddir}/info.json", "r") as f:
         info = json.load(f)
@@ -99,9 +103,6 @@ def prepare(_args):
 
     ostree("pull-local", source, refs[0],
            repo=repo)
-
-    config = configparser.ConfigParser()
-    config.read('config.ini')
 
     arch = config.get("DEFAULT", "arch")
     dest = config.get(f"commit-{arch}", "manifest")
@@ -122,8 +123,8 @@ def prepare(_args):
     return 0
 
 
-def finish(_args):
-    builddir = os.path.abspath("build")
+def finish(args):
+    builddir, config = buildenv_from_args(args)
 
     with open(f"{builddir}/info.json", "r") as f:
         info = json.load(f)
@@ -153,6 +154,12 @@ def serve(_args):
 
 def main():
     parser = argparse.ArgumentParser(description="osbuild ostree update tool")
+    parser.add_argument("--build-dir", metavar="DIR", type=os.path.abspath,
+                        default="build", dest="builddir",
+                        help="temporary directory to store build data")
+    parser.add_argument("--config", metavar="FILE", type=os.path.abspath,
+                        default="config.ini", dest="config",
+                        help="Build configuration")
     parser.set_defaults(cmd=None)
     sp = parser.add_subparsers(help='commands')
 
