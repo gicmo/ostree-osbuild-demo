@@ -8,6 +8,7 @@ import os
 import platform
 import subprocess
 import sys
+import time
 
 # Hack to ensure with have the osbuild package available
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
@@ -64,10 +65,13 @@ class Build:
         pipeline = manifest["pipeline"]
         self.pipeline = osbuild.load(pipeline, sources)
         self.write_manifest()
+        self.info["start"] = time.time()
         return self.pipeline
 
     def finish(self):
+        self.info["stop"] = time.time()
         self.write_info()
+        return self.info["stop"] - self.info["start"]
 
 
 class BuildEnv:
