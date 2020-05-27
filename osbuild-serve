@@ -31,7 +31,6 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
             print(f"{self.path} not found")
 
     def finish(self):
-        super.finish()
         gc.collect()
 
     parent = http.server.SimpleHTTPRequestHandler
