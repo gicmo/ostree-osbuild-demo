@@ -23,14 +23,25 @@ RED = "\033[31m"
 
 
 class Build:
-    def __init__(self, env, target, manifest):
+    def __init__(self, env, target, manifest, path=None):
         self.env = env
         self.target = target
         self.manifest = manifest
-        self.path = env.builddir
         self._pipeline = None
+        self.path = path
 
-        self.info = self.read_info()
+        if path:
+            info = self.read_info()
+        else:
+            info = {"target": target}
+            if self.target == "commit":
+                info["ostree"] = {}
+
+        self.info = info
+
+    @property
+    def exists(self):
+        return os.path.exists(self.path)
 
     def load_pipeline(self):
         manifest = self.manifest
@@ -39,13 +50,8 @@ class Build:
         return osbuild.load(pipeline, sources)
 
     def read_info(self):
-        try:
-            with self.open("info.json", mode='r') as f:
-                info = json.load(f)
-        except (FileNotFoundError, json.decoder.JSONDecodeError):
-            info = {"target": target}
-            if self.target == "commit":
-                info["ostree"] = {}
+        with self.open("info.json", mode='r') as f:
+            info = json.load(f)
         return info
 
     def write_info(self):
@@ -53,7 +59,7 @@ class Build:
             json.dump(self.info, f)
 
     def write_manifest(self):
-        with self.open(f"{self.target}-manifest.json", mode="w+") as f:
+        with self.open("manifest.json", mode="w+") as f:
             json.dump(self.manifest, f, indent=2)
 
     @contextlib.contextmanager
@@ -65,8 +71,18 @@ class Build:
         finally:
             f.close()
 
+    def build_path(self, pipeline):
+        root = self.env.buildsroot
+        target = self.target
+        output_id = pipeline.output_id
+        return os.path.join(root, target, output_id)
+
     def begin(self):
         pipeline = self.load_pipeline()
+        self._pipeline = pipeline
+        self.path = self.build_path(self._pipeline)
+        os.makedirs(self.path, exist_ok=True)
+
         self.write_manifest()
         self.info["start"] = time.time()
         return pipeline
@@ -88,11 +104,20 @@ class BuildEnv:
         if os.path.isfile(args.config):
             self.config.read(args.config)
 
+        name = self.config.get("DEFAULT", "name")
+        nick = self.config.get("DEFAULT", "nick", fallback=name)
+
+        self.variant = {"name": name, "nick": nick}
+        buildsroot = os.path.join(self.builddir, "builds", nick)
+        self.buildsroot = buildsroot
+
     def init(self):
         builddir = self.builddir
         os.makedirs(builddir, exist_ok=True)
         uid = int(os.getenv("SUDO_UID", os.getuid()))
         os.chown(builddir, uid, os.getgid())
+        os.makedirs(self.buildsroot, exist_ok=True)
+        os.chown(self.buildsroot, uid, os.getgid())
         return self.builddir
 
     @property
@@ -140,14 +165,6 @@ class BuildEnv:
             info = {'ostree': {}}
         return info
 
-    def write_info(self):
-        with self.open("info.json", mode='w') as f:
-            json.dump(self.info, f)
-
-    def write_manifest(self, manifest, name):
-        with self.open(f"{name}-manifest.json", mode="w+") as f:
-            json.dump(manifest, f, indent=2)
-
     @contextlib.contextmanager
     def open(self, *path, mode='r'):
         full_path = os.path.join(self.builddir, *path)
@@ -163,10 +180,25 @@ class BuildEnv:
         return build
 
     def load_build(self, target):
-        with self.open(f"{target}-manifest.json", mode="r") as f:
+        builds = self.list_builds(target)
+
+        if not builds:
+            raise ValueError(f"No builds for {target}")
+
+        buildpath = builds[-1].path  # the oldest one
+        path = os.path.join(buildpath, "manifest.json")
+        with self.open(path, mode="r") as f:
             manifest = json.load(f)
-        build = Build(self, target, manifest)
+        build = Build(self, target, manifest, buildpath)
         return build
+
+    def list_builds(self, target):
+        with os.scandir(os.path.join(self.buildsroot, target)) as entries:
+            entries = list(entries)
+        visible = filter(lambda e: not e.name.startswith('.'), entries)
+        dirs = filter(lambda e: e.is_dir(follow_symlinks=False), visible)
+        builds = sorted(dirs, key=lambda e: e.stat().st_mtime)
+        return builds
 
 
 def genisoimage(outdir, datdir):
@@ -185,11 +217,13 @@ def genisoimage(outdir, datdir):
 
 
 def boot(env):
-    builddir, info = env.builddir, env.info
+    builddir = env.builddir
 
-    output_id = info["image"]["output_id"]
-    image_name = info["image"]["name"]
-    path = f"{builddir}/store/refs/{output_id}/{image_name}"
+    build = env.load_build("image")
+
+    image_name = build.info["image"]["name"]
+    path = os.path.join(build.path, image_name)
+
     print(f"Image at {path}")
 
     datadir = os.path.abspath("cloud-init")
@@ -292,7 +326,7 @@ def load_pipeline(manifest):
     return pipeline
 
 
-def build_pipeline(pipeline, store):
+def build_pipeline(pipeline, store, outdir):
     print("Building the following pipeline:")
     print_pipeline(pipeline, store)
 
@@ -309,7 +343,8 @@ def build_pipeline(pipeline, store):
 
     r = pipeline.run(store.store,
                      interactive=True,
-                     libdir=libdir)
+                     libdir=libdir,
+                     output_directory=outdir)
 
     if not r["success"]:
         raise BuildError
@@ -324,7 +359,7 @@ def sign_commit(env: BuildEnv):
 
     output_id = build.info["ostree"]["output_id"]
     commit_id = build.info["ostree"]["commit_id"]
-    repo = f"{builddir}/store/refs/{output_id}/repo"
+    repo = os.path.join(build.path, "repo")
     data = {
         "builddir": builddir,
         "repo": repo,
@@ -356,8 +391,7 @@ def prepare_sources(manifest, commit):
     commit_id = commit.info["ostree"]["commit_id"]
     gpg = commit.info["ostree"]["gpg"]
 
-    obj = store.resolve_ref(output_id)
-    url = "file://" + os.path.join(obj, "repo")
+    url = "file://" + os.path.join(commit.path, "repo")
     sources = manifest["sources"]
 
     sources["org.osbuild.ostree"] = {
@@ -393,13 +427,13 @@ def build_commit(env: BuildEnv):
 
     pipeline = build.begin()
 
-    build_pipeline(pipeline, store)
+    build_pipeline(pipeline, store, build.path)
 
-    output_id = pipeline.output_id
-    obj = store.resolve_ref(output_id)
-    with open(f"{obj}/compose.json") as fp:
+    with open(f"{build.path}/compose.json") as fp:
         commit_meta = json.load(fp)
         commit_id = commit_meta["ostree-commit"]
+
+    output_id = pipeline.output_id
 
     print_pipeline_done("ostree commit", {
         "output id": output_id,
@@ -429,7 +463,7 @@ def build_image(env: BuildEnv):
 
     pipeline = build.begin()
 
-    build_pipeline(pipeline, store)
+    build_pipeline(pipeline, store, build.path)
 
     output_id = pipeline.output_id
     image_name = pipeline.assembler.options["filename"]
@@ -439,8 +473,7 @@ def build_image(env: BuildEnv):
         "image": image_name
     })
 
-    image_abspath = store.resolve_ref(output_id)
-    image_relpath = os.path.relpath(image_abspath, os.path.curdir)
+    image_relpath = os.path.relpath(build.path, os.path.curdir)
     print("")
     print("Image ready at:")
     print(f"  {image_relpath}/{image_name}")
