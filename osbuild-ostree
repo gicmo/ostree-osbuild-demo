@@ -28,9 +28,15 @@ class Build:
         self.target = target
         self.manifest = manifest
         self.path = env.builddir
-        self.pipeline = None
+        self._pipeline = None
 
         self.info = self.read_info()
+
+    def load_pipeline(self):
+        manifest = self.manifest
+        sources = manifest.get("sources", {})
+        pipeline = manifest["pipeline"]
+        return osbuild.load(pipeline, sources)
 
     def read_info(self):
         try:
@@ -60,13 +66,10 @@ class Build:
             f.close()
 
     def begin(self):
-        manifest = self.manifest
-        sources = manifest.get("sources", {})
-        pipeline = manifest["pipeline"]
-        self.pipeline = osbuild.load(pipeline, sources)
+        pipeline = self.load_pipeline()
         self.write_manifest()
         self.info["start"] = time.time()
-        return self.pipeline
+        return pipeline
 
     def finish(self):
         self.info["stop"] = time.time()
