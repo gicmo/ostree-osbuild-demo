@@ -5,7 +5,6 @@ import gc
 import http.server
 import json
 import os
-import socketserver
 import sys
 from functools import partial
 
