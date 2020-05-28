@@ -163,9 +163,6 @@ def finish(args):
 
     print(f"Using build: {build}")
 
-    with open(f"{build}/info.json", "r") as f:
-        info = json.load(f)
-
     source = f"{build}/repo"
     repo = f"{builddir}/repo"
 
