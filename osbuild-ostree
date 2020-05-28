@@ -352,6 +352,20 @@ def build_pipeline(pipeline, store, outdir):
     return r
 
 
+def manifest_needs_commit(manifest):
+    for stage in manifest["pipeline"]["stages"]:
+        options = stage.get("options")
+        if stage["name"] in ["org.osbuild.selinux"]:
+            options = options.get("ostree", {})
+
+        if not options or "commit" not in options:
+            continue
+
+        if not options["commit"]:
+            return True
+    return False
+
+
 def sign_commit(env: BuildEnv):
     build = env.load_build("commit")
 
@@ -451,15 +465,16 @@ def build_commit(env: BuildEnv):
 def build_image(env: BuildEnv):
     store = env.store
 
-    commit = env.load_build("commit")
-
     print(f"{BOLD}Building the image{RESET}")
 
     build = env.prepare_build("image")
     manifest = build.manifest
 
-    prepare_image_pipeline(manifest, commit)
-    prepare_sources(manifest, commit)
+    if manifest_needs_commit(manifest):
+        commit = env.load_build("commit")
+        prepare_image_pipeline(manifest, commit)
+        prepare_sources(manifest, commit)
+        build.info["ostree"] = commit.info["ostree"]
 
     pipeline = build.begin()
 
@@ -478,7 +493,6 @@ def build_image(env: BuildEnv):
     print("Image ready at:")
     print(f"  {image_relpath}/{image_name}")
 
-    build.info["ostree"] = commit.info["ostree"]
     build.info["image"] = {
         "output_id": output_id,
         "name": image_name,
