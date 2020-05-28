@@ -216,7 +216,7 @@ def genisoimage(outdir, datdir):
     subprocess.run(args, check=True)
 
 
-def boot(env):
+def boot_cmd(env):
     builddir = env.builddir
 
     build = env.load_build("image")
@@ -487,7 +487,7 @@ def build_image(env: BuildEnv):
     build.finish()
 
 
-def build(env):
+def build_cmd(env):
     target = env.args.target or env.targets
 
     try:
@@ -511,7 +511,7 @@ def build(env):
     return 0
 
 
-def clean(env):
+def clean_cmd(env):
     targets = env.args.target or ['all']
     builddir = env.builddir
     paths = []
@@ -593,11 +593,11 @@ def main():
     env = BuildEnv(args)
 
     if args.cmd == "build":
-        return build(env)
+        return build_cmd(env)
     if args.cmd == "clean":
-        return clean(env)
+        return clean_cmd(env)
     if args.cmd == "boot":
-        return boot(env)
+        return boot_cmd(env)
     return 1
 
 
