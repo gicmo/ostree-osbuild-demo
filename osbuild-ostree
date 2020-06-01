@@ -14,6 +14,7 @@ import time
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)),
                                 "osbuild"))
 import osbuild  #pylint: disable=wrong-import-position
+from osbuild.main_cli import mark_checkpoints #pylint: disable=wrong-import-position
 
 
 RESET = "\033[0m"
@@ -79,6 +80,7 @@ class Build:
 
     def begin(self):
         pipeline = self.load_pipeline()
+        self.env.mark_checkpoints(pipeline)
         self._pipeline = pipeline
         self.path = self.build_path(self._pipeline)
         os.makedirs(self.path, exist_ok=True)
@@ -164,6 +166,17 @@ class BuildEnv:
         except (FileNotFoundError, json.decoder.JSONDecodeError):
             info = {'ostree': {}}
         return info
+
+    def mark_checkpoints(self, pipeline: osbuild.Pipeline):
+        checkpoints = self.args.checkpoint
+        if not checkpoints:
+            return
+
+        missed = mark_checkpoints(pipeline, checkpoints)
+        if missed:
+            for checkpoint in missed:
+                print(f"{BOLD}{RED}WARNING:{RESET}", end="")
+                print(f" Checkpoint {BOLD}{checkpoint}{RESET} not found!")
 
     @contextlib.contextmanager
     def open(self, *path, mode='r'):
@@ -296,6 +309,8 @@ def print_pipeline(pipeline, store, level=0):
         print(f"{indent}stages:")
     for stage in pipeline.stages:
         status = store_status(store, stage.id)
+        if stage.checkpoint:
+            status += " checkpoint"
         print(f"{indent}  {stage.name}: \t{stage.id}{status}")
 
     asm = pipeline.assembler
@@ -577,6 +592,8 @@ def main():
     sp = parser.add_subparsers(help='commands')
 
     subpar = sp.add_parser("build", help='build commit or image')
+    subpar.add_argument("--checkpoint", metavar="ID", action="append", type=str, default=None,
+                        help="object to commit to the store during build (can be passed multiple times)")
     subpar.add_argument("--commit", dest='target', action='append_const', const="commit",
                         help='build the commit')
     subpar.add_argument("--sign", dest='target', action='append_const', const="sign",
