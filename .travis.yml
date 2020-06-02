@@ -8,10 +8,12 @@ env:
 jobs:
   include:
     - name: pylint
-      before_install: pip3 install pylint==2.4.1
+      before_install: pip3 install pylint==2.4.1 jsonschema
       script:
         - env "PYTHONPATH=osbuild" pylint osbuild-ostree sign-commit
     - name: build
-      before_install: sudo apt-get install -y systemd-container rpm ostree gpg
+      before_install:
+        - sudo apt-get install -y systemd-container rpm ostree gpg
+        -  pip3 install jsonschema
       script:
         - sudo env "PATH=$PATH" python3 osbuild-ostree build
