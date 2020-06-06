@@ -10,9 +10,27 @@ packages:
   - rpm-ostree
   - systemd
   - xfsprogs
+  # installer
+  - selinux-policy-targeted
+  - genisoimage
+  - isomd5sum
+  - xorriso
+  - syslinux
+  - lorax-templates-generic
+  - syslinux-nonlinux
+  - squashfs-tools
   # for the grub stage
 packages-x86_64:
   - grub2-pc-modules
   - grub2-tools       # for the unicode font
   - grub2-efi-x64
   - shim-x64
+  # installer
+  - efibootmgr
+  - grub2-tools-minimal
+  - grub2-tools-extra
+  - grub2-tools-efi
+  - grub2-efi-x64
+  - grub2-efi-x64-cdboot
+  - shim-ia32
+  - grub2-efi-ia32-cdboot

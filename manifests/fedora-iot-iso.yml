@@ -1,0 +1,201 @@
+repos:
+  - fedora
+packages:
+  # This is taken from lorax
+  #  share/templates.d/99-generic/runtime-install.tmpl
+
+  # anaconda
+  - anaconda
+  - anaconda-widgets
+  - kexec-tools-anaconda-addon
+  - anaconda-install-env-deps
+  - tmux
+
+  # branding
+  # https://github.com/weldr/lorax/blob/f83ae2fed314f03b0397293ce4d944f58926c4b2/src/pylorax/treebuilder.py#L93
+  - fedora-release-iot
+  - fedora-logos
+
+  # payloads
+  - dnf
+  - rpm-ostree
+  - ostree
+
+  # compression
+  - pigz
+
+  # kernel
+  - kernel
+  - kernel-modules
+  - kernel-modules-extra
+
+  # TODO: firmware
+  - glibc-all-langpacks
+  - plymouth
+
+  # dracut
+  - anaconda-dracut
+  - dracut-network
+  - dracut-config-generic
+
+  # import-state.service for switchroot
+  - initscripts
+
+  # rescue needs this
+  - cryptsetup
+
+  # rpcbind or portmap needed by dracut nfs module
+  - rpcbind
+
+  # required for dracut
+  - kbd
+  - kbd-misc
+  # required for anaconda-dracut (img-lib etc.)
+  - tar
+  - xz
+  - curl
+  - bzip2
+
+  # basic system stuff
+  - systemd-sysv
+  - systemd-units
+  - rsyslog
+
+  # xorg/GUI packages
+  - xorg-x11-drivers
+  - xorg-x11-server-Xorg
+  - xorg-x11-server-utils
+  - xorg-x11-xauth
+  - dbus-x11
+  - metacity
+  - gsettings-desktop-schemas
+  - nm-connection-editor
+  - librsvg2
+
+  # filesystem tools
+  - btrfs-progs
+  - jfsutils
+  - xfsprogs
+  - reiserfs-utils
+  - gfs2-utils
+  - ntfs-3g
+  - ntfsprogs
+  - system-storage-manager
+  - device-mapper-persistent-data
+  - xfsdump
+
+  # extra storage packages
+  - udisks2
+  - udisks2-iscsi
+  - hostname   # hostname is needed for iscsi to work, see RHBZ#1593917
+
+  # extra libblockdev plugins
+  - libblockdev-lvm-dbus
+
+  # needed for LUKS escrow
+  - volume_key
+  - nss-tools
+
+  # SELinux support
+  - selinux-policy-targeted
+  - audit
+
+  # network tools/servers
+  - ethtool
+  - openssh-server
+  - nfs-utils
+  - openssh-clients
+  - tigervnc-server-minimal
+  - tigervnc-server-module
+  - net-tools
+  - bridge-utils
+  - nmap-ncat
+
+  # hardware utilities/libraries
+  - pciutils
+  - usbutils
+  - ipmitool
+  - mt-st
+  - smartmontools
+  - hdparm
+  - rng-tools
+
+  # fonts & themes
+  - aajohan-comfortaa-fonts
+  - abattis-cantarell-fonts
+  - bitmap-fangsongti-fonts
+  - dejavu-sans-fonts
+  - dejavu-sans-mono-fonts
+  - google-noto-sans-cjk-ttc-fonts
+  - google-noto-sans-gurmukhi-fonts
+  - google-noto-sans-sinhala-vf-fonts
+  - jomolhari-fonts
+  - khmeros-base-fonts
+  - lohit-assamese-fonts
+  - lohit-bengali-fonts
+  - lohit-devanagari-fonts
+  - lohit-gujarati-fonts
+  - lohit-kannada-fonts
+  - lohit-marathi-fonts
+  - lohit-odia-fonts
+  - lohit-tamil-fonts
+  - lohit-telugu-fonts
+  - madan-fonts
+  - paktype-naskh-basic-fonts
+  - sil-abyssinica-fonts
+  - sil-padauk-fonts
+  - sil-scheherazade-fonts
+  - smc-meera-fonts
+  - thai-scalable-waree-fonts
+  - xorg-x11-fonts-misc
+
+  # debugging/bug reporting tools
+  - gdb-gdbserver
+  - libreport-plugin-bugzilla
+  - libreport-plugin-reportuploader
+  - fpaste
+  - python3-pyatspi
+
+  # extra tools not required by anaconda
+  - vim-minimal
+  - strace
+  - lsof
+  - dump
+  - xz
+  - less
+  - wget
+  - rsync
+  - bind-utils
+  - ftp
+  - mtr
+  - vconfig
+  - icfg
+  - spice-vdagent
+  - gdisk
+  - hexedit
+  - sg3_utils
+
+  # satisfy libnotify's desktop-notification-daemon with the least crazy option
+  - notification-daemon
+
+packages-x86_64:
+  - pcmciautils
+
+  - dmidecode
+  - libmlx4
+  - rdma-core
+
+  # bootloader
+  - grub2-tools-efi
+  - efibootmgr
+  - shim-x64
+  - grub2-efi-x64-cdboot
+  - shim-ia32
+  - grub2-efi-ia32-cdboot
+  - biosdevname
+  - syslinux
+  - grub2-tools
+  - grub2-tools-minimal
+  - grub2-tools-extra
+
+  - memtest86+
