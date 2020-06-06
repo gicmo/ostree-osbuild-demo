@@ -3,9 +3,11 @@
 import argparse
 import configparser
 import contextlib
+import hashlib
 import json
 import os
 import platform
+import re
 import subprocess
 import sys
 import time
@@ -62,6 +64,11 @@ class Build:
     def write_manifest(self):
         with self.open("manifest.json", mode="w+") as f:
             json.dump(self.manifest, f, indent=2)
+
+    def write_pipeline(self):
+        with self.open("pipeline.json", mode="w") as f:
+            pl = self._pipeline.description(with_id=True)
+            json.dump(pl, f, indent=2)
 
     @contextlib.contextmanager
     def open(self, *path, mode='r'):
@@ -137,6 +144,9 @@ class BuildEnv:
         if f"image-{self.arch}" in self.config:
             targets += ["image"]
 
+        if f"installer-{self.arch}" in self.config:
+            targets += ["installer"]
+
         return targets
 
     def load_manifest(self, name):
@@ -144,6 +154,12 @@ class BuildEnv:
         path = self.config.get(section, "manifest")
         with open(path, "r") as f:
             return json.load(f)
+
+    def load_kickstart(self, name):
+        section = f"{name}-{self.arch}"
+        path = self.config.get(section, "kickstart")
+        with open(path, "r") as f:
+            return f.read()
 
     @property
     def info(self):
@@ -379,7 +395,7 @@ def build_pipeline(pipeline, store, outdir):
 def manifest_needs_commit(manifest):
     for stage in manifest["pipeline"]["stages"]:
         options = stage.get("options")
-        if stage["name"] in ["org.osbuild.selinux"]:
+        if stage["name"] in ["org.osbuild.anaconda"]:
             options = options.get("ostree", {})
 
         if not options or "commit" not in options:
@@ -445,11 +461,53 @@ def prepare_sources(manifest, commit):
     }
 
 
+def prepare_kickstart(build: Build, manifest, commit):
+    commit_id = commit.info["ostree"]["commit_id"]
+    ref = commit.info["ostree"]["ref"]
+
+    patterns = [
+        (r"@REF@", ref),
+        (r"@REMOTE_URL@", "http://10.0.2.2:8000/")
+    ]
+    finder = [(re.compile(p), s) for p, s in patterns]
+
+    ks = build.env.load_kickstart("installer")
+
+    data = b""
+    m = hashlib.sha256()
+    for line in ks.split("\n"):
+        for p, s in finder:
+            line = p.sub(s, line)
+        line += "\n"
+        d = line.encode("utf-8")
+        m.update(d)
+        data += d
+
+    checksum = "sha256:" + m.hexdigest()
+
+    anaconda = None
+    for stage in manifest["pipeline"]["stages"]:
+        print(stage["name"])
+        if stage["name"] != "org.osbuild.anaconda":
+            continue
+        anaconda = stage
+        break
+
+    options = anaconda["options"]
+    options["ostree"]["commit"] = commit_id
+    options["ostree"]["ref"] = ref
+    options["kickstart"] = checksum
+    return {
+        "checksum": checksum,
+        "data": data
+    }
+
+
 def prepare_image_pipeline(manifest, commit):
     commit_id = commit.info["ostree"]["commit_id"]
     for stage in manifest["pipeline"]["stages"]:
         options = stage.get("options")
-        if stage["name"] in ["org.osbuild.selinux"]:
+        if stage["name"] in ["org.osbuild.anaconda"]:
             options = options.get("ostree", {})
 
         if not options or "commit" not in options:
@@ -543,6 +601,54 @@ def build_image(env: BuildEnv):
     build.finish()
 
 
+def build_installer(env: BuildEnv):
+    store = env.store
+
+    print(f"{BOLD}Building the installer{RESET}")
+
+    build = env.prepare_build("installer")
+    manifest = build.manifest
+
+    commit = env.load_build("commit")
+    prepare_image_pipeline(manifest, commit)
+    prepare_sources(manifest, commit)
+    kickstart = prepare_kickstart(build, manifest, commit)
+    build.info["ostree"] = commit.info["ostree"]
+
+    pipeline = build.begin()
+
+    with build.open("kickstart.ks", mode="w+b") as f:
+        f.write(kickstart["data"])
+
+    sources = pipeline.stages[0].sources
+    sources["org.osbuild.files"]["urls"].update({
+        kickstart["checksum"]: f"file://{build.path}/kickstart.ks"
+    })
+
+    build.write_pipeline()
+    build_pipeline(pipeline, store, build.path)
+
+    output_id = pipeline.output_id
+    image_name = pipeline.assembler.options["filename"]
+
+    print_pipeline_done("installer", {
+        "output id": output_id,
+        "image": image_name
+    })
+
+    image_relpath = os.path.relpath(build.path, os.path.curdir)
+    print("")
+    print("Installer ready at:")
+    print(f"  {image_relpath}/{image_name}")
+
+    build.info["image"] = {
+        "output_id": output_id,
+        "name": image_name,
+    }
+
+    build.finish()
+
+
 def build_cmd(env):
     target = env.args.target or env.targets
 
@@ -555,6 +661,9 @@ def build_cmd(env):
 
         if 'image' in target:
             build_image(env)
+
+        if 'installer' in target:
+            build_installer(env)
 
     except KeyboardInterrupt:
         print()
@@ -626,6 +735,8 @@ def main():
                         help='sign the commit')
     subpar.add_argument("--image", dest='target', action='append_const', const="image",
                         help='build the image')
+    subpar.add_argument("--installer", dest='target', action='append_const', const="installer",
+                        help='build the installer')
     subpar.set_defaults(cmd='build')
 
     subpar = sp.add_parser("clean", help='cleanup the build dir')

@@ -262,6 +262,31 @@ def prepare_image_manifest(config, treespec, arch, solver):
     return manifest
 
 
+def prepare_installer_manifest(config, arch, solver):
+    print("Preparing the installer manifest:")
+    section = f"installer-{arch}"
+
+    tree_file = config.get(section, "tree_file")
+
+    print(f"  - {BOLD}{tree_file}{RESET}")
+
+    with open(tree_file, "r") as f:
+        treespec = yaml.unsafe_load(f)
+
+    templatefile = config.get(section, "template")
+    with open(templatefile, "r") as fp:
+        manifest = json.load(fp)
+
+    if "org.osbuild.files" in manifest["sources"]:
+        manifest["sources"]["org.osbuild.files"]["urls"] = {}
+
+    if find_stage(manifest, "org.osbuild.rpm"):
+        pkgs = solver.resolve(treespec)
+        manifest_update_packages(manifest, pkgs)
+
+    return manifest
+
+
 def main():
     parser = argparse.ArgumentParser(description="configure manifests")
     parser.add_argument("--config", metavar="FILE", type=os.path.abspath,
@@ -316,6 +341,14 @@ def main():
             dest = config.get(f"image-{arch}", "manifest")
             with open(dest, "w") as f:
                 json.dump(image, f, indent=2)
+
+        if f"installer-{arch}" in config:
+            installer = prepare_installer_manifest(config, arch, solver)
+            manifest_add_build_pipeline(installer, builder, relver)
+
+            dest = config.get(f"installer-{arch}", "manifest")
+            with open(dest, "w") as f:
+                json.dump(installer, f, indent=2)
 
 
 if __name__ == "__main__":
