@@ -295,6 +295,49 @@ def boot_cmd(env):
     return r.returncode
 
 
+def install_cmd(env):
+    build = env.load_build("installer")
+
+    image_name = build.info["image"]["name"]
+    path = os.path.join(build.path, image_name)
+
+    size = "3G"
+    disk = "disk.qcow2"
+    print(f"Creating disk image of size {size} at {disk}")
+    subprocess.run(["qemu-img", "create", "-f", "qcow2", disk, size],
+                   check=True)
+
+    print(f"Image at {path}")
+
+    portfwd = {
+        2222:22,
+        9091:909
+    }
+
+    fwds = [f"hostfwd=tcp::{h}-:{g}" for h, g in portfwd.items()]
+
+    # create a new mac address based on our machine id
+    with open("/etc/machine-id", "r") as f:
+        data = f.read().strip()
+
+
+    maclst = ["FE"] + [data[x:x+2] for x in range(-12, -2, 2)]
+    macstr = ":".join(maclst)
+
+    print(f"MAC: {BOLD}{macstr}{RESET}")
+
+    argv = ['qemu-system-x86_64',
+            "-m", "2048",
+            '-enable-kvm',
+            "-cdrom", path,
+            "-drive", f"file={disk}",
+            "-device", f"virtio-net-pci,netdev=n0,mac={macstr}",
+            "-netdev", "user,id=n0,net=10.0.2.0/24," + ",".join(fwds)]
+
+    r = subprocess.run(argv, check=False)
+    return r.returncode
+
+
 class BuildError(Exception):
     pass
 
@@ -757,6 +800,9 @@ def main():
                         help='make changes persistent')
     subpar.set_defaults(cmd='boot')
 
+    subpar = sp.add_parser("install", help='install the final image')
+    subpar.set_defaults(cmd='install')
+
     args = parser.parse_args()
 
     if not args.cmd:
@@ -772,6 +818,8 @@ def main():
         return clean_cmd(env)
     if args.cmd == "boot":
         return boot_cmd(env)
+    if args.cmd == "install":
+        return install_cmd(env)
     return 1
 
 
