@@ -459,6 +459,21 @@ def build_commit(env: BuildEnv):
 
     build_pipeline(pipeline, store, build.path)
 
+    taropts = pipeline.assembler.options.get("tar")
+    if taropts:
+        print("Decompressing commit tarball")
+        filename = taropts["filename"]
+        command = [
+            "tar",
+            "-x",
+            "--auto-compress",
+            "-f", os.path.join(build.path, filename),
+            "-C", build.path
+        ]
+        subprocess.run(command,
+                       stdout=sys.stderr,
+                       check=True)
+
     with open(f"{build.path}/compose.json") as fp:
         commit_meta = json.load(fp)
         commit_id = commit_meta["ostree-commit"]
