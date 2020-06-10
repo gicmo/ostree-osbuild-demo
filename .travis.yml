@@ -13,7 +13,7 @@ jobs:
         - env "PYTHONPATH=osbuild" pylint osbuild-ostree sign-commit
     - name: build
       before_install:
-        - sudo apt-get install -y systemd-container rpm ostree gpg
+        - sudo apt-get install -y systemd-container rpm ostree gpg policycoreutils
         -  pip3 install jsonschema
       script:
         - sudo env "PATH=$PATH" python3 osbuild-ostree build
