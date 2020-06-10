@@ -5,6 +5,7 @@ packages:
   - dosfstools
   - e2fsprogs
   - policycoreutils
+  - selinux-policy-targeted
   - qemu-img
   - rpm-ostree
   - systemd

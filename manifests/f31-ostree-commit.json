@@ -723,7 +723,10 @@
                 "sha256:efaffc9dcfd4c3b2e0755b13121107c967b0f62294a28014efff536eea063a03",
                 "sha256:7d1dd8f15692e19f522dffea2979894d8e7f3a8e2341ed3aac3e51a4cc2930c4",
                 "sha256:070234e58fbef7f64465522ef5669e6decf80e63c7d821fdf6eb91997a076529",
+                "sha256:f50957375c79be57f391625b97d6ea74505e05f2edc6b9bc6768d5e3ad6ef8f8",
                 "sha256:deb934183f8554669821baf08d13a85b729a037fb6e4b60ad3894c996063a165",
+                "sha256:d5fbbd9fed99da8f9c8ca5d4a735f91bcf8d464ee2f82c82ff34e18480a02108",
+                "sha256:c2e96724fe6aa2ca5b87451583c55a6174598e31bedd00a0efe44df35097a41a",
                 "sha256:4c859170bc4705a8ff4592f7376918fd2a97435c13cde79f24475c0a0866251d",
                 "sha256:2c22da397e0dd4b77a352b8890c062d0df00688062ab2de601d833f9b55ac5b3",
                 "sha256:7ea689d094636fa9e0f18e6ac971bdf7aa1f5a379e00993e90de7b06c62a1071",
@@ -750,6 +753,12 @@
                 "sha256:db11cec438594c2f52b19028dd9ee4fe4013fe4af583b8202c08c3d072e8021c",
                 "sha256:491c387e645800cf771c0581f9a4dd11722ae54a5e119b451b0c1ea3afd317d9"
               ]
+            }
+          },
+          {
+            "name": "org.osbuild.selinux",
+            "options": {
+              "file_contexts": "etc/selinux/targeted/contexts/files/file_contexts"
             }
           }
         ]
@@ -1282,7 +1291,10 @@
     "assembler": {
       "name": "org.osbuild.ostree.commit",
       "options": {
-        "ref": "fedora/x86_64/osbuild-demo"
+        "ref": "fedora/x86_64/osbuild-demo",
+        "tar": {
+          "filename": "commit.tar"
+        }
       }
     }
   }
