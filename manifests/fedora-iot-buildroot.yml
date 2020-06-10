@@ -1,6 +1,5 @@
 repos:
   - fedora
-  - fedora-updates
 packages:
   - rpm
   - dosfstools
