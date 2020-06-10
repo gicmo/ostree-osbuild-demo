@@ -62,7 +62,7 @@ packages:
   - less
   - tar
   - fwupd
-# - usbguard # SELinux issues
+  - usbguard
   - greenboot
   - greenboot-grub2
   - greenboot-rpm-ostree-grub2
