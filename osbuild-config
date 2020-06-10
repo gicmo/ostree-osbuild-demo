@@ -20,6 +20,9 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
+SELINUX_FILE_CONTEXTS = "etc/selinux/targeted/contexts/files/file_contexts"
+
+
 class DepSolver:
     def __init__(self, arch, relver, dirs):
         self.base = dnf.Base()
@@ -147,6 +150,12 @@ def prepare_build_manifest(config, solver):
                 {
                     "name": "org.osbuild.rpm",
                     "options": {}
+                },
+                {
+                    "name": "org.osbuild.selinux",
+                    "options": {
+                        "file_contexts": SELINUX_FILE_CONTEXTS
+                    }
                 }
             ]
         },
