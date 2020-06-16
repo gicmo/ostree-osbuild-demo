@@ -1112,12 +1112,6 @@
         }
       },
       {
-        "name": "org.osbuild.selinux",
-        "options": {
-          "file_contexts": "etc/selinux/targeted/contexts/files/file_contexts"
-        }
-      },
-      {
         "name": "org.osbuild.rpm-ostree",
         "options": {
           "etc_group_members": [
