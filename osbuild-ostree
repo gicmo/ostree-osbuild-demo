@@ -316,6 +316,8 @@ def print_pipeline(pipeline, store, level=0):
     asm = pipeline.assembler
     if asm:
         status = store_status(store, asm.id)
+        if asm.checkpoint:
+            status += " checkpoint"
         print(f"{indent}assembler:")
         print(f"{indent}  {asm.name:25} \t{asm.id}{status}")
 
