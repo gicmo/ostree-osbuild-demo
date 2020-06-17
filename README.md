@@ -42,7 +42,7 @@ contain the target commits in a format that can
 be served via http. This is done via:
 
 ```
-./osbuild-update setup.
+./osbuild-update setup
 ```
 This will also ensure the image manifest has a
 remote manually configured that points to the
@@ -53,14 +53,20 @@ host. This image needs to now be build by running:
 ```
 
 This will build the image with the starting commit
-that will be updated later. Now changes can be made
-to the package selection or packages be updated.
+that will be updated later. After the build is done
+import it into the main repository with:
+
+```bash
+./osbuild-update import
+```
+
+Now changes can be made to the package selection or
+packages be updated.
 After this a new commit needs to be build with these
 changes but also with the starting commit as the
 parent commit. This can be done via:
 
 ```
-./osbuild-update prepare
 sudo ./osbuild-ostree build --commit --sign
 ```
 
@@ -72,7 +78,7 @@ After the new commit is built, it needs to be
 imported into the update repository with:
 
 ``` bash
-./osbuild-update finish
+./osbuild-update import
 ```
 
 Now the contents of the update repository can be

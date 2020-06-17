@@ -161,7 +161,7 @@ def setup(args):
                    check=False)
 
 
-def prepare(args):
+def do_import(args):
     builddir, config = buildenv_from_args(args)
 
     build = find_build(builddir, config)
@@ -171,17 +171,6 @@ def prepare(args):
 
     subprocess.run(["git", "diff", "--", path],
                    check=False)
-
-    return 0
-
-
-def finish(args):
-    builddir, config = buildenv_from_args(args)
-
-    build = find_build(builddir, config)
-
-    print(f"Using build: {build}")
-    import_build(builddir, build)
 
     return 0
 
@@ -206,11 +195,8 @@ def main():
     subpar = sp.add_parser("setup", help='Setup for the update')
     subpar.set_defaults(cmd='setup')
 
-    subpar = sp.add_parser("prepare", help='Prepare an update')
-    subpar.set_defaults(cmd='prepare')
-
-    subpar = sp.add_parser("finish", help='Pull in an update')
-    subpar.set_defaults(cmd='finish')
+    subpar = sp.add_parser("import", help='Import an update')
+    subpar.set_defaults(cmd='import')
 
     subpar = sp.add_parser("serve", help='Serve updates')
     subpar.add_argument('--port', default=8000, type=int)
@@ -225,10 +211,8 @@ def main():
 
     if args.cmd == "setup":
         r = setup(args)
-    elif args.cmd == "prepare":
-        r = prepare(args)
-    elif args.cmd == "finish":
-        r = finish(args)
+    elif args.cmd == "import":
+        r = do_import(args)
     elif args.cmd == "serve":
         r = serve(args)
     else:
