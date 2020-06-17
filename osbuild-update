@@ -77,15 +77,20 @@ def import_build(builddir, build):
 
     r = ostree("refs", repo=source)
     refs = r.stdout.strip().split("\n")
+    ref = refs[0]
+
+    r = ostree("rev-parse", ref, repo=source)
+    commit_id = r.stdout.strip()
 
     build_nick = os.path.relpath(build, f"{builddir}/builds")
     print(f"Importing build: {build_nick}")
-    print(f"  {refs[0]}")
+    print(f"  {refs[0]}: {BOLD}{commit_id}{RESET}")
 
-    ostree("pull-local", source, refs[0],
+    ostree("pull-local", source, ref,
            repo=repo, _stdout=sys.stderr)
 
     ostree("summary", "--update", repo=repo)
+    return ref, commit_id
 
 
 def setup(args):
