@@ -6,7 +6,6 @@ import json
 import os
 import subprocess
 import sys
-import tempfile
 
 
 RESET = "\033[0m"
@@ -14,13 +13,18 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
-def ostree(*args, _input=None, _stdout=sys.stderr, **kwargs):
+def ostree(*args, _input=None, _stdout=None, **kwargs):
     args = list(args) + [f'--{k}={v}' for k, v in kwargs.items()]
-    subprocess.run(["ostree"] + args,
-                   encoding="utf-8",
-                   stdout=_stdout,
-                   input=_input,
-                   check=True)
+
+    if _stdout is None:
+        _stdout = subprocess.PIPE
+
+    r = subprocess.run(["ostree"] + args,
+                       encoding="utf-8",
+                       stdout=_stdout,
+                       input=_input,
+                       check=True)
+    return r
 
 
 def find_stage(pipeline, name):
@@ -71,17 +75,15 @@ def import_build(builddir, build):
     source = f"{build}/repo"
     repo = f"{builddir}/repo"
 
-    with tempfile.TemporaryFile(dir=builddir) as r:
-        ostree("refs", repo=source, _stdout=r)
-        r.seek(0)
-        refs = r.read().decode("utf-8").strip().split("\n")
+    r = ostree("refs", repo=source)
+    refs = r.stdout.strip().split("\n")
 
     build_nick = os.path.relpath(build, f"{builddir}/builds")
     print(f"Importing build: {build_nick}")
     print(f"  {refs[0]}")
 
     ostree("pull-local", source, refs[0],
-           repo=repo)
+           repo=repo, _stdout=sys.stderr)
 
     ostree("summary", "--update", repo=repo)
 
@@ -149,7 +151,9 @@ def prepare(args):
         refs = r.read().decode("utf-8").strip().split("\n")
 
     ostree("pull-local", source, refs[0],
-           repo=repo)
+           repo=repo, _stdout=sys.stderr)
+
+    ostree("summary", "--update", repo=repo)
 
     arch = config.get("DEFAULT", "arch")
     dest = config.get(f"commit-{arch}", "manifest")
