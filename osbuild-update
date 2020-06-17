@@ -142,23 +142,7 @@ def prepare(args):
 
     build = find_build(builddir, config)
 
-    with open(f"{build}/info.json", "r") as f:
-        info = json.load(f)
-
-    commit_id = info["ostree"]["commit_id"]
-
-    source = f"{build}/repo"
-    repo = f"{builddir}/repo"
-
-    with tempfile.TemporaryFile(dir=builddir) as r:
-        ostree("refs", repo=source, _stdout=r)
-        r.seek(0)
-        refs = r.read().decode("utf-8").strip().split("\n")
-
-    ostree("pull-local", source, refs[0],
-           repo=repo, _stdout=sys.stderr)
-
-    ostree("summary", "--update", repo=repo)
+    _, commit_id = import_build(builddir, build)
 
     arch = config.get("DEFAULT", "arch")
     dest = config.get(f"commit-{arch}", "manifest")
