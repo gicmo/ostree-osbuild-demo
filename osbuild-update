@@ -65,6 +65,27 @@ def find_build(builddir, config):
     return builds[-1].path
 
 
+def import_build(builddir, build):
+    """Import a build into the canonical repository"""
+
+    source = f"{build}/repo"
+    repo = f"{builddir}/repo"
+
+    with tempfile.TemporaryFile(dir=builddir) as r:
+        ostree("refs", repo=source, _stdout=r)
+        r.seek(0)
+        refs = r.read().decode("utf-8").strip().split("\n")
+
+    build_nick = os.path.relpath(build, f"{builddir}/builds")
+    print(f"Importing build: {build_nick}")
+    print(f"  {refs[0]}")
+
+    ostree("pull-local", source, refs[0],
+           repo=repo)
+
+    ostree("summary", "--update", repo=repo)
+
+
 def setup(args):
     builddir, config = buildenv_from_args(args)
 
@@ -162,19 +183,8 @@ def finish(args):
     build = find_build(builddir, config)
 
     print(f"Using build: {build}")
+    import_build(builddir, build)
 
-    source = f"{build}/repo"
-    repo = f"{builddir}/repo"
-
-    with tempfile.TemporaryFile(dir=builddir) as r:
-        ostree("refs", repo=source, _stdout=r)
-        r.seek(0)
-        refs = r.read().decode("utf-8").strip().split("\n")
-
-    ostree("pull-local", source, refs[0],
-           repo=repo)
-
-    ostree("summary", "--update", repo=repo)
     return 0
 
 
