@@ -311,13 +311,13 @@ def print_pipeline(pipeline, store, level=0):
         status = store_status(store, stage.id)
         if stage.checkpoint:
             status += " checkpoint"
-        print(f"{indent}  {stage.name}: \t{stage.id}{status}")
+        print(f"{indent}  {stage.name:25} \t{stage.id}{status}")
 
     asm = pipeline.assembler
     if asm:
         status = store_status(store, asm.id)
         print(f"{indent}assembler:")
-        print(f"{indent}  {asm.name}: \t{asm.id}{status}")
+        print(f"{indent}  {asm.name:25} \t{asm.id}{status}")
 
 
 def print_pipeline_done(name, items):
@@ -344,7 +344,6 @@ def load_pipeline(manifest):
 
 def build_pipeline(pipeline, store, outdir):
     print("Building the following pipeline:")
-    print_pipeline(pipeline, store)
 
     print("")
     stages = pipeline.stages
@@ -354,6 +353,10 @@ def build_pipeline(pipeline, store, outdir):
         if stage.name == "org.osbuild.rpm":
             print(f"checkpointing rpm stage: {stage.id}")
             stage.checkpoint = True
+
+    print("")
+    print(f"{BOLD}pipeline{RESET}:")
+    print_pipeline(pipeline, store)
 
     libdir = find_osbuild_module()
 
