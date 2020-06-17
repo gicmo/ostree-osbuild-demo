@@ -50,6 +50,19 @@ def buildenv_from_args(args):
     return builddir, config
 
 
+def write_manifest(manifest, dest):
+    with open(dest, "w") as fp:
+        json.dump(manifest, fp, indent=2)
+
+    print("")
+    print(f"Wrote manifest at '{BOLD}{dest}{RESET}'")
+    print("")
+
+    subprocess.run(["git", "diff", "--", dest],
+                   check=False)
+
+    return dest
+
 def find_build(builddir, config):
     name = config.get("DEFAULT", "name")
     nick = config.get("DEFAULT", "nick", fallback=name)
@@ -108,12 +121,8 @@ def update_manfiest(config, commit_id):
 
     assembler["options"]["parent"] = commit_id
 
-    with open(dest, "w") as fp:
-        json.dump(manifest, fp, indent=2)
+    write_manifest(manifest, dest)
 
-    print("")
-    print(f"Wrote manifest at '{BOLD}{dest}{RESET}'")
-    print("")
     return dest
 
 
@@ -151,14 +160,9 @@ def setup(args):
 
     remote["url"] = "http://10.0.2.2:8000/"
 
-    with open(dest, "w") as fp:
-        json.dump(manifest, fp, indent=2)
+    write_manifest(manifest, dest)
 
-    print("")
-    print(f"Wrote manifest at '{BOLD}{dest}{RESET}'")
-    print("")
-    subprocess.run(["git", "diff", "--", dest],
-                   check=False)
+    return 0
 
 
 def do_import(args):
@@ -167,10 +171,7 @@ def do_import(args):
     build = find_build(builddir, config)
 
     _, commit_id = import_build(builddir, build)
-    path = update_manfiest(config, commit_id)
-
-    subprocess.run(["git", "diff", "--", path],
-                   check=False)
+    update_manfiest(config, commit_id)
 
     return 0
 
