@@ -582,6 +582,9 @@ def clean_cmd(env):
             paths += [f"{builddir}/store/tmp"]
             paths += [f"{builddir}/store/refs"]
             paths += [f"{builddir}/store/objects"]
+        elif t == "builds":
+
+            paths += [env.buildsroot]
         else:
             ValueError("unknown clean target")
 
@@ -632,6 +635,8 @@ def main():
                         help='remove the osbuild store')
     subpar.add_argument("--objects", dest='target', action='append_const', const="objects",
                         help='remove the osbuild store objects')
+    subpar.add_argument("--builds", dest='target', action='append_const', const="builds",
+                        help='remove the all builds')
     subpar.set_defaults(cmd='clean')
 
     subpar = sp.add_parser("boot", help='boot the final image')
