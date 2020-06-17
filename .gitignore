@@ -3,3 +3,5 @@ gpghome/
 signing.ini
 tmp/
 .idea/
+__pycache__
+.vscode
