@@ -93,6 +93,30 @@ def import_build(builddir, build):
     return ref, commit_id
 
 
+def update_manfiest(config, commit_id):
+    """Update the commit manifest with commit_id"""
+    arch = config.get("DEFAULT", "arch")
+    dest = config.get(f"commit-{arch}", "manifest")
+
+    with open(dest, "r") as fp:
+        manifest = json.load(fp)
+
+    pipeline = manifest["pipeline"]
+    assembler = pipeline["assembler"]
+    if assembler["name"] != "org.osbuild.ostree.commit":
+        raise ValueError(f"wrong assembler {assembler['name']}")
+
+    assembler["options"]["parent"] = commit_id
+
+    with open(dest, "w") as fp:
+        json.dump(manifest, fp, indent=2)
+
+    print("")
+    print(f"Wrote manifest at '{BOLD}{dest}{RESET}'")
+    print("")
+    return dest
+
+
 def setup(args):
     builddir, config = buildenv_from_args(args)
 
@@ -143,29 +167,10 @@ def prepare(args):
     build = find_build(builddir, config)
 
     _, commit_id = import_build(builddir, build)
+    path = update_manfiest(config, commit_id)
 
-    arch = config.get("DEFAULT", "arch")
-    dest = config.get(f"commit-{arch}", "manifest")
-
-    with open(dest, "r") as fp:
-        manifest = json.load(fp)
-
-    pipeline = manifest["pipeline"]
-    assembler = pipeline["assembler"]
-    if assembler["name"] != "org.osbuild.ostree.commit":
-        raise ValueError(f"wrong assembler {assembler['name']}")
-
-    assembler["options"]["parent"] = commit_id
-
-    with open(dest, "w") as fp:
-        json.dump(manifest, fp, indent=2)
-
-    print("")
-    print(f"Wrote manifest at '{BOLD}{dest}{RESET}'")
-    print("")
-    subprocess.run(["git", "diff", "--", dest],
+    subprocess.run(["git", "diff", "--", path],
                    check=False)
-
 
     return 0
 
