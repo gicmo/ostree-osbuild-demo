@@ -348,7 +348,10 @@ def build_pipeline(pipeline, store, outdir):
     print("")
     stages = pipeline.stages
     if pipeline.build:
-        stages = pipeline.build.stages + stages
+        stage = pipeline.build.stages[-1]
+        print(f"checkpointing build pipeline: {stage.id}")
+        stage.checkpoint = True
+
     for stage in stages:
         if stage.name == "org.osbuild.rpm":
             print(f"checkpointing rpm stage: {stage.id}")
