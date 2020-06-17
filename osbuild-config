@@ -111,7 +111,7 @@ def find_stage(manifest, name, ensure_options=True):
     pipeline = manifest["pipeline"]
     for stage in pipeline["stages"]:
         if stage["name"] == name:
-            if "options" not in stage:
+            if "options" not in stage and ensure_options:
                 stage["options"] = {}
             return stage
     return None
