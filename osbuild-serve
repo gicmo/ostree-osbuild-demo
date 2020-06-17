@@ -144,19 +144,28 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         repo = OSTree.Repo.new(Gio.File.new_for_path(repopath))
         repo.open(None)
         _, refs = repo.list_refs()
-        ref = next(iter(refs))
-        commit_id = refs[ref]
+        try:
+            ref = next(iter(refs))
+            commit_id = refs[ref]
+        except StopIteration:
+            ref = None
+            commit_id = None
 
-        content += f'{commit_id}</a> <br>'
         content = HEADER
         content += f'<h1>OSBuild OSTree Repsitory</h1>'
 
-        _, commit, _ = repo.load_commit(commit_id)
-        parent_id = OSTree.commit_get_parent(commit)
+        if ref:
+            content += f' ref: <span id="ref">{ref}</span><br>'
 
-        if parent_id:
-            content += f'parent: <a href="/osbuild/commit/{parent_id}">'
-            content += f'{parent_id}</a> <br>'
+        while commit_id:
+            _, commit, _ = repo.load_commit(commit_id)
+            parent_id = OSTree.commit_get_parent(commit)
+
+            content += f' commit: <a href="/osbuild/commit/{commit_id}">'
+            content += f'<span id="commit-id"> {commit_id}</span></a> <br>'
+            content += '<hr>'
+
+            commit_id = parent_id
 
         content += '</body><html>'
         self.send_response(200)
