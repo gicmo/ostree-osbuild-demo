@@ -22,6 +22,23 @@ BOLD = "\033[1m"
 RED = "\033[31m"
 
 
+HEADER = """
+<html>
+  <head>
+    <meta charset="UTF-8">
+    <style>
+body              {font-family: 'Open Sans', sans-serif;}
+#commit-id        {font-family: 'IBM Plex Mono', monospace;}
+#ref              {font-family: 'IBM Plex Mono', monospace;}
+a                 {text-decoration: underline; color: black;}
+a:link, a:visited {text-decoration: underline; color: black;}
+a:hover           {text-decoration: underline; color: blue;}
+hr                {border-top: 1px dotted #fff;}
+    </style>
+  </head>
+"""
+
+
 class HttpHandler(http.server.SimpleHTTPRequestHandler):
     default_request_version = 'HTTP/1.1'
 
@@ -67,8 +84,8 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         _, commit, _ = repo.load_commit(commit_id)
         parent = OSTree.commit_get_parent(commit)
 
-        content = '<html><head><meta charset="UTF-8"></head><body>'
-        content += f'commit: {commit_id} <br>'
+        content = HEADER
+        content += f'commit: <span id="commit-id"> {commit_id}</span> <br>'
 
         rem, add, old, new = None, None, None, None
         if parent:
@@ -130,9 +147,9 @@ class HttpHandler(http.server.SimpleHTTPRequestHandler):
         ref = next(iter(refs))
         commit_id = refs[ref]
 
-        content = '<html><head><meta charset="UTF-8"></head><body>'
-        content += f'commit: <a href="/osbuild/commit/{commit_id}">'
         content += f'{commit_id}</a> <br>'
+        content = HEADER
+        content += f'<h1>OSBuild OSTree Repsitory</h1>'
 
         _, commit, _ = repo.load_commit(commit_id)
         parent_id = OSTree.commit_get_parent(commit)
