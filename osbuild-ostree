@@ -365,8 +365,9 @@ def build_pipeline(pipeline, store, outdir):
 
     libdir = find_osbuild_module()
 
+    monitor = osbuild.monitor.LogMonitor(sys.stdout.fileno())
     r = pipeline.run(store.store,
-                     interactive=True,
+                     monitor=monitor,
                      libdir=libdir,
                      output_directory=outdir)
 
