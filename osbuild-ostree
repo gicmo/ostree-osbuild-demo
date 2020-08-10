@@ -30,6 +30,7 @@ class Build:
         self.manifest = manifest
         self._pipeline = None
         self.path = path
+        self.result = None
 
         if path:
             info = self.read_info()
@@ -63,6 +64,10 @@ class Build:
         with self.open("manifest.json", mode="w+") as f:
             json.dump(self.manifest, f, indent=2)
 
+    def write_result(self):
+        with self.open("result.json", mode='w') as f:
+            json.dump(self.result, f)
+
     @contextlib.contextmanager
     def open(self, *path, mode='r'):
         full_path = os.path.join(self.path, *path)
@@ -89,9 +94,12 @@ class Build:
         self.info["start"] = time.time()
         return pipeline
 
-    def finish(self):
+    def finish(self, res=None):
         self.info["stop"] = time.time()
         self.write_info()
+        if res:
+            self.result = res
+            self.write_result()
         return self.info["stop"] - self.info["start"]
 
 
@@ -466,7 +474,7 @@ def build_commit(env: BuildEnv):
 
     pipeline = build.begin()
 
-    build_pipeline(pipeline, store, build.path)
+    res = build_pipeline(pipeline, store, build.path)
 
     taropts = pipeline.assembler.options.get("tar")
     if taropts:
@@ -502,7 +510,7 @@ def build_commit(env: BuildEnv):
         "ref": ref,
     })
 
-    build.finish()
+    build.finish(res)
 
 
 def build_image(env: BuildEnv):
