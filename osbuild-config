@@ -53,7 +53,7 @@ class DepSolver:
 
         for repo_id in manifest["repos"]:
             if repo_id not in self.repos:
-                raise ValueError("fUnknown repo: {repo_id}")
+                raise ValueError(f"Unknown repo: {repo_id}")
             repo = self.repos[repo_id]
             base.repos.add(repo)
             for key in repo.gpgkey:
