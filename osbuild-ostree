@@ -254,7 +254,7 @@ def boot_cmd(env):
 
     portfwd = {
         2222:22,
-        9091:909
+        9091:9091
     }
 
     fwds = [f"hostfwd=tcp::{h}-:{g}" for h, g in portfwd.items()]
