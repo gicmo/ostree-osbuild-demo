@@ -111,8 +111,8 @@ class BuildEnv:
         self._store = None
 
         self.config = configparser.ConfigParser()
-        if os.path.isfile(args.config):
-            self.config.read(args.config)
+        with open(args.config, "r", encoding="utf-8") as f:
+            self.config.read_file(f, source=args.config)
 
         name = self.config.get("DEFAULT", "name")
         nick = self.config.get("DEFAULT", "nick", fallback=name)
