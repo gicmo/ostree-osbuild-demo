@@ -88,6 +88,7 @@ packages:
   - kernel-tools
   - libgpiod-utils
   - podman
+  - podman-plugins
   - container-selinux
   - skopeo
   - criu
@@ -96,6 +97,9 @@ packages:
   - clevis
   - clevis-dracut
   - clevis-luks
+  - clevis-pin-tpm2
+  - parsec
+  - dbus-parsec
 packages-x86_64:
   - grub2
   - grub2-efi-x64
@@ -122,9 +126,18 @@ units:
   - firewalld.service
   - rngd.service
   - sshd.service
-  - zram-swap.service
   - zezere_ignition.timer
   - zezere_ignition_banner.service
+  - greenboot-grub2-set-counter
+  - greenboot-grub2-set-success
+  - greenboot-healthcheck
+  - greenboot-rpm-ostree-grub2-check-fallback
+  - greenboot-status
+  - greenboot-task-runner
+  - redboot-auto-reboot
+  - redboot-task-runner
+  - parsec
+  - dbus-parsec
 etc-group-members:
   - wheel
   - docker
